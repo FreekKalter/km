@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"github.com/coopernurse/gorp"
+	_ "github.com/lib/pq"
 )
 
 const timeFmt = "01-02-2006"
