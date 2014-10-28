@@ -16,7 +16,7 @@ func TestInit(t *testing.T) {
 func TestUpdate(t *testing.T) {
 	testDate := time.Date(2009, time.November, 10, 0, 0, 0, 0, time.UTC)
 
-	fields := []Field{Field{Km: 123456, Time: "13:00", Name: "Begin"}}
+	fields := []Field{Field{Km: 123456, Time: "13:00", Name: "Begin"}, Field{}}
 	cmpDate := int64(1257854400) // 10-11-2009 13:00 uur (in unix formaat)
 
 	dateStr := fmt.Sprintf("%d-%d-%d", testDate.Month(), testDate.Day(), testDate.Year())
