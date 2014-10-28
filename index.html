@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en" ng-app="kmApp">
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+        <title>Km</title>
+        <meta name="description" content="">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=1">
+        <base href="/">
+
+        <!-- for iphone 5 -->
+        <meta name="viewport" content="initial-scale=1.0,user-scalable=no,maximum-scale=1" media="(device-height: 568px)" />
+
+        <link rel="shortcut icon" type="image/png" href="/img/favicon.png"/>
+        <!-- Apple device homescreen settings -->
+        <!--<meta name="apple-mobile-web-app-capable" content="yes" />-->
+        <!--<meta name="apple-mobile-web-app-status-bar-style" content="black" />-->
+        <meta name="apple-touch-fullscreen" content="YES" />
+        <meta name="format-detection" content="telephone=no" />
+
+        <link rel="shortcut icon" href="/img/favicon.ico">
+        <link rel="apple-touch-icon" sizes="57x57" href="/img/apple-touch-icon-57x57.png">
+        <link rel="apple-touch-icon" sizes="114x114" href="/img/apple-touch-icon-114x114.png">
+        <link rel="apple-touch-icon" sizes="72x72" href="/img/apple-touch-icon-72x72.png">
+        <link rel="apple-touch-icon" sizes="144x144" href="/img/apple-touch-icon-144x144.png">
+        <link rel="apple-touch-icon" sizes="60x60" href="/img/apple-touch-icon-60x60.png">
+        <link rel="apple-touch-icon" sizes="120x120" href="/img/apple-touch-icon-120x120.png">
+        <link rel="apple-touch-icon" sizes="76x76" href="/img/apple-touch-icon-76x76.png">
+        <link rel="apple-touch-icon" sizes="152x152" href="/img/apple-touch-icon-152x152.png">
+        <link rel="icon" type="image/png" href="/img/favicon-96x96.png" sizes="96x96">
+        <link rel="icon" type="image/png" href="/img/favicon-16x16.png" sizes="16x16">
+        <link rel="icon" type="image/png" href="/img/favicon-32x32.png" sizes="32x32">
+        <meta name="msapplication-TileColor" content="#000000">
+        <meta name="msapplication-TileImage" content="/img/mstile-144x144.png">
+        <meta name="msapplication-config" content="/img/browserconfig.xml">
+
+        <!--<link href="//netdna.bootstrapcdn.com/bootstrap/3.0.3/css/bootstrap.min.css" rel="stylesheet">-->
+        <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.2.0/css/bootstrap.min.css">
+        {{if eq .Env "testing"}}
+            <link rel="stylesheet" href="css/datepicker3.css">
+            <link href="css/main.css" rel="stylesheet" media="screen">
+        {{else}}
+            <link href="css/main.min.css" rel="stylesheet" media="screen">
+            <link href="css/datepicker3.min.css" rel="stylesheet" media="screen">
+        {{end}}
+    </head>
+    <body>
+        {{if eq .Env "testing"}}
+            <!-- Load CDN resoursces   -->
+            <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.10.2/jquery.min.js"></script>
+            <script type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/angularjs/1.2.3/angular.min.js"></script>
+            <script type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/angularjs/1.2.3/angular-route.min.js"></script>
+            <script type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/angularjs/1.2.3/angular-animate.min.js"></script>
+            <script src="js/ui-bootstrap-custom-tpls-0.7.0.Minimale.min.js"></script>
+
+            <script src="js/bootstrap-datepicker.js"></script>
+
+            <script src="js/app.js"></script>
+            <script src="js/controller.js"></script>
+            <script src="js/animations.js"></script>
+        {{else}}
+            <!--<script src="js/combined.anno.min.js"></script>-->
+            <script src="js/master.js"></script>
+        {{end}}
+
+        <!--[if lt IE 7]>
+        <p class="chromeframe">You are using an <strong>outdated</strong> browser. Please <a href="http://browsehappy.com/">upgrade your browser</a> or <a href="http://www.google.com/chromeframe/?redirect=true">activate Google Chrome Frame</a> to improve your experience.</p>
+        <![endif]-->
+
+        <div id="wrap">
+            <div class="container">
+                <div ng-view> </div>
+            </div><!-- (main) .container -->
+        </div> <!-- wrap -->
+
+        <div id="footer">
+            <div class="container">
+                <hr>
+                <p class="text-center muted credit"><a href="http://kalteronline.org">Kalter&Co</a></p>
+            </div>
+        </div> <!--footer-->
+        </body>
+    </html>
