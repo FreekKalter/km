@@ -2,9 +2,11 @@ package km
 
 import (
 	"fmt"
+	"log"
 	"time"
 
 	"github.com/coopernurse/gorp"
+	_ "github.com/lib/pq"
 )
 
 type Kilometers struct {
@@ -63,13 +65,15 @@ func SaveKilometers(dbmap *gorp.DbMap, date time.Time, fields []Field) (err erro
 			return
 		}
 	} else { // nog niks opgeslagen voor vandaag}
-		kms := new(Kilometers)
-		kms.Date = date
-		kms.AddFields(fields)
-		err = dbmap.Insert(kms)
-		if err != nil {
-			return
-		}
+		log.Println("error after Selectone: ", err)
+		log.Printf("%+v\n", kms)
+		//kms := new(Kilometers)
+		//kms.Date = date
+		//kms.AddFields(fields)
+		//err = dbmap.Insert(kms)
+		//if err != nil {
+		//return
+		//}
 	}
 	return nil
 }
