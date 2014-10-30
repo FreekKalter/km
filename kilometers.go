@@ -1,6 +1,11 @@
 package km
 
-import "time"
+import (
+	"fmt"
+	"time"
+
+	"github.com/coopernurse/gorp"
+)
 
 type Kilometers struct {
 	Id                            int64
@@ -45,4 +50,26 @@ func (k *Kilometers) AddFields(fields []Field) {
 		}
 
 	}
+}
+
+func SaveKilometers(dbmap *gorp.DbMap, date time.Time, fields []Field) (err error) {
+	dateStr := fmt.Sprintf("%d-%d-%d", date.Month(), date.Day(), date.Year())
+	kms := new(Kilometers)
+	err = dbmap.SelectOne(kms, "select * from kilometers where date=$1", dateStr)
+	if err == nil { // there is already data for km (so use update)
+		kms.AddFields(fields)
+		_, err = dbmap.Update(kms)
+		if err != nil {
+			return
+		}
+	} else { // nog niks opgeslagen voor vandaag}
+		kms := new(Kilometers)
+		kms.Date = date
+		kms.AddFields(fields)
+		err = dbmap.Insert(kms)
+		if err != nil {
+			return
+		}
+	}
+	return nil
 }

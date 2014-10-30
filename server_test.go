@@ -89,7 +89,7 @@ func getTodayString() string {
 	return fmt.Sprintf("%d%d%d", today.Day(), today.Month(), today.Year())
 }
 
-func TestSave(t *testing.T) {
+func TestSaveReturnCodes(t *testing.T) {
 	clearTable(t, "kilometers")
 
 	var table []*TestCombo = []*TestCombo{
@@ -105,9 +105,15 @@ func TestSave(t *testing.T) {
 
 	req, _ = http.NewRequest("POST", "/save/"+todayStr, strings.NewReader(`{"Name": "InvalidFieldname", "Value": 1234}`))
 	table = append(table, &TestCombo{req, NotParsable})
-	//TODO: add more test here
+
+	req, _ = http.NewRequest("POST", "/save/"+todayStr, strings.NewReader(""))
+	table = append(table, &TestCombo{req, NotParsable})
 
 	tableDrivenTest(t, table)
+}
+
+func TestSaveKilometers(t *testing.T) {
+
 }
 
 func TestHome(t *testing.T) {
