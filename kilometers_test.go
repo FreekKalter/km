@@ -1,9 +1,9 @@
 package km
 
 import (
+	"io/ioutil"
 	"log"
 	"os"
-	"syscall"
 	"testing"
 	"time"
 
@@ -44,34 +44,72 @@ func TestAddFields(t *testing.T) {
 
 }
 
-func TestSaveKilometersMock(t *testing.T) {
-	//log.SetOutput(ioutil.Discard)
+func mockSetup() (err error, dbmap *gorp.DbMap, columns []string) {
 	db, err := sqlmock.New()
 	if err != nil {
-		t.Errorf("An error '%s' was not expected when opening a stub database connection", err)
-
+		return
 	}
-	columns := []string{"Id", "Date", "Begin", "Eerste", "Laatste", "Terug", "Comment"}
+	columns = []string{"Id", "Date", "Begin", "Eerste", "Laatste", "Terug", "Comment"}
+	dbmap = &gorp.DbMap{Db: db, Dialect: gorp.PostgresDialect{}}
+	dbmap.AddTable(Kilometers{}).SetKeys(true, "Id")
+	dbmap.AddTable(Times{}).SetKeys(true, "Id")
+	if testing.Verbose() {
+		dbmap.TraceOn("DB:\t", log.New(os.Stdout, "", log.Lshortfile))
+	} else {
+
+		dbmap.TraceOn("DB:\t", log.New(ioutil.Discard, "", log.Lshortfile))
+	}
+	return
+}
+
+func TestUpdateKilometers(t *testing.T) {
+	err, dbmap, columns := mockSetup()
+	if err != nil {
+		t.Error(err)
+	}
 	date := time.Date(2014, time.January, 1, 0, 0, 0, 0, time.UTC)
 	sqlmock.ExpectQuery("select \\* from kilometers where date=(.+)").
 		WithArgs("1-1-2014").
 		WillReturnRows(sqlmock.NewRows(columns).AddRow(1, date, 1234, 0, 0, 0, ""))
 
 	sqlmock.ExpectExec("update \"kilometers\" set \"date\"=(.+)").
-		WithArgs(date, 1234, 12345, 0, 0, "", 1).
+		WithArgs(date, 1234, 0, 0, 12345, "", 1).
 		WillReturnResult(sqlmock.NewResult(1, 1))
 
-	var Dbmap *gorp.DbMap
-	Dbmap = &gorp.DbMap{Db: db, Dialect: gorp.PostgresDialect{}}
-	tm := Dbmap.AddTable(Kilometers{}).SetKeys(true, "Id")
-	log.Printf("%+v", tm.Columns[1])
-
-	logFile, _ := os.OpenFile("db.log", syscall.O_WRONLY|syscall.O_APPEND|syscall.O_CREAT, 0666)
-	Dbmap.TraceOn("[gorp]", log.New(logFile, "DB:\t", log.LstdFlags))
-
-	fields := []Field{Field{Name: "Eerste", Km: 12345, Time: "13:00"}}
-	err = SaveKilometers(Dbmap, date, fields)
+	fields := []Field{Field{Name: "Terug", Km: 12345, Time: "13:00"}}
+	err = SaveKilometers(dbmap, date, fields)
 	if err != nil {
 		t.Errorf("SaveKilometers returned: %s", err)
+	}
+	if err = dbmap.Db.Close(); err != nil {
+		t.Errorf("Error '%s' was not expected while closing the database", err)
+	}
+}
+
+func TestInsertKilometers(t *testing.T) {
+	if !testing.Verbose() {
+		log.SetOutput(ioutil.Discard)
+	}
+	err, dbmap, columns := mockSetup()
+	if err != nil {
+		t.Error(err)
+	}
+	date := time.Date(2014, time.January, 1, 0, 0, 0, 0, time.UTC)
+	sqlmock.ExpectQuery("select \\* from kilometers where date=(.+)").
+		WithArgs("1-1-2014").
+		WillReturnRows(sqlmock.NewRows(columns).FromCSVString(""))
+
+	// INSERT is Query aparently,
+	sqlmock.ExpectQuery("insert into \"kilometers\"(.+)").
+		WithArgs(date, 0, 0, 0, 12345, ""). //autoincrement field (id in this case) not given to WithArgs
+		WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow(1))
+
+	fields := []Field{Field{Name: "Terug", Km: 12345, Time: "13:00"}}
+	err = SaveKilometers(dbmap, date, fields)
+	if err != nil {
+		t.Errorf("SaveKilometers returned: %s", err)
+	}
+	if err = dbmap.Db.Close(); err != nil {
+		t.Errorf("Error '%s' was not expected while closing the database", err)
 	}
 }
