@@ -11,14 +11,43 @@ import (
 	"testing"
 	"time"
 
+	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/coopernurse/gorp"
 	_ "github.com/lib/pq"
 )
 
-var config Config = Config{Env: "production", Log: ""}
-var s *Server = NewServer("km_test", config)
-var db *gorp.DbMap = s.Dbmap
+var (
+	config Config
+	s      *Server
+	db     *gorp.DbMap
+)
 
+func initServer(t *testing.T) {
+	var err error
+	config = Config{Env: "production", Log: "./test.log"}
+	s, err = NewServer("km_test", config)
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+	db = s.Dbmap
+}
+
+func TestServerInitErrors(t *testing.T) {
+	_, err := NewServer("test", Config{Log: "/test.log"})
+	t.Log(err)
+	if err == nil {
+		t.Error("NewServer should throw error on unwritable logfile input")
+	}
+
+	ss, err := NewServer("test", Config{Env: "testing", Log: "./test.log"})
+	if err != nil {
+		t.Error("newserver with 'testing' environment fails to init: %s", err.Error())
+	}
+	if ss == nil {
+		t.Error("server struct returned is nil")
+	}
+
+}
 func clearTable(t *testing.T, tableName string) {
 	_, err := db.Exec("truncate kilometers")
 	if err != nil {
@@ -62,6 +91,7 @@ func NewTestCombo(url string, resp Response) *TestCombo {
 }
 
 func TestDelete(t *testing.T) {
+	initServer(t)
 	clearTable(t, "kilometers")
 
 	// add a row, save id
@@ -92,34 +122,36 @@ func dateFormat(t time.Time) string {
 }
 
 func TestSaveReturnCodes(t *testing.T) {
+	initServer(t)
 	clearTable(t, "kilometers")
 
-	var table []*TestCombo = []*TestCombo{
-		NewTestCombo("/save", NotFound),
-		NewTestCombo("/save/a", NotFound),
-	}
 	goodDate := time.Date(2014, time.January, 1, 0, 0, 0, 0, time.UTC)
 	todayStr := dateFormat(goodDate)
+	var table []*TestCombo = []*TestCombo{
+		NewTestCombo("/save", NotFound),
+		NewTestCombo("/save/a", NotFound),         // only respond to post not get
+		NewTestCombo("/save/"+todayStr, NotFound), // only respond to post not get
+	}
 	req, _ := http.NewRequest("POST", "/save/kilometers/today", strings.NewReader(`{"Name": "Begin", "Value": 1234}`))
 	table = append(table, &TestCombo{req, Response{Code: 404}})
 
-	req, _ = http.NewRequest("POST", "/save/"+todayStr, strings.NewReader(`{"Name": "Begin", "Value": "abc"}`))
+	req, _ = http.NewRequest("POST", "/save/"+todayStr, strings.NewReader(`{"Name": "Begin", "Km": "abc"}`))
 	table = append(table, &TestCombo{req, NotParsable})
 
-	req, _ = http.NewRequest("POST", "/save/"+todayStr, strings.NewReader(`{"Name": "InvalidFieldname", "Value": 1234}`))
+	req, _ = http.NewRequest("POST", "/save/"+todayStr, strings.NewReader(`{"Name": "InvalidFieldname", "Km": 1234}`))
 	table = append(table, &TestCombo{req, NotParsable})
 
 	req, _ = http.NewRequest("POST", "/save/"+todayStr, strings.NewReader(""))
 	table = append(table, &TestCombo{req, NotParsable})
 
+	req, _ = http.NewRequest("POST", "/save/blaat", strings.NewReader(`{"Name": "Begin", "Km": 1234}`))
+	table = append(table, &TestCombo{req, InvalidId})
+
 	tableDrivenTest(t, table)
 }
 
-func TestSaveKilometers(t *testing.T) {
-
-}
-
 func TestHome(t *testing.T) {
+	initServer(t)
 	var table []*TestCombo = []*TestCombo{
 		NewTestCombo("/", Response{Code: 200}),
 	}
@@ -127,6 +159,7 @@ func TestHome(t *testing.T) {
 }
 
 func TestState(t *testing.T) {
+	initServer(t)
 	goodDate := time.Date(2014, time.January, 1, 0, 0, 0, 0, time.UTC)
 	dateStr := dateFormat(goodDate)
 	now := time.Now()
@@ -154,6 +187,7 @@ func TestState(t *testing.T) {
 }
 
 func TestOverview(t *testing.T) {
+	initServer(t)
 	var table []*TestCombo = []*TestCombo{
 		NewTestCombo("/overview", NotFound),
 		NewTestCombo("/overview/invalidCategory/2013/01", InvalidUrl),
@@ -180,5 +214,39 @@ func BenchmarkOverview(b *testing.B) {
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		s.ServeHTTP(w, req)
+	}
+}
+
+func TestNewTimeRow(t *testing.T) {
+	tr := NewTimeRow()
+	tt := TimeRow{Begin: "-", CheckIn: "-", CheckOut: "-", Laatste: "-"}
+	if tr != tt {
+		t.Error("NewTimeRow should return a TimeRow struct with all fields initialized to '-'")
+	}
+}
+
+func TestGetAllTimes(t *testing.T) {
+	err, dbmap, columns := MockSetup("times")
+	if err != nil {
+		t.Errorf("setting up mock db: %s", err.Error())
+	}
+	var year, month int64 = 2014, 1
+	date1 := time.Date(2014, time.January, 1, 0, 0, 0, 0, time.UTC)
+	sqlmock.ExpectQuery("select \\* from times where (.+)").
+		WithArgs(year, month).
+		WillReturnRows(sqlmock.NewRows(columns).AddRow(1, date1, 1388577600, 0, 0, 0))
+	rows, err := getAllTimes(dbmap, year, month)
+	if err != nil {
+		t.Errorf("getAllTimes returned: %s", err)
+	}
+	if len(rows) != 1 {
+		t.Errorf("getAlltimes returned unexpected number of rows")
+	}
+	rowExpected := TimeRow{Id: 1, Date: date1, Begin: "13:00", CheckIn: "-", CheckOut: "-", Laatste: "-"}
+	if rows[0] != rowExpected {
+		t.Errorf("row expected: %+v, got: %+v", rowExpected, rows[0])
+	}
+	if err = dbmap.Db.Close(); err != nil {
+		t.Errorf("Error '%s' was not expected while closing the database", err)
 	}
 }

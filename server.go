@@ -30,16 +30,13 @@ type Server struct {
 	config    Config
 }
 
-func NewServer(dbName string, config Config) *Server {
-	var (
-		logFile *os.File
-		err     error
-	)
+func NewServer(dbName string, config Config) (s *Server, err error) {
+	var logFile *os.File
 	// Set up logging
 	if config.Log != "" {
 		logFile, err = os.OpenFile(config.Log, syscall.O_WRONLY|syscall.O_APPEND|syscall.O_CREAT, 0666)
 		if err != nil {
-			log.Panic(err)
+			return nil, fmt.Errorf("could not open logfile: %s", err.Error())
 		}
 		log.SetOutput(logFile)
 		log.SetPrefix("km-app:\t")
@@ -48,7 +45,7 @@ func NewServer(dbName string, config Config) *Server {
 	db, err := sql.Open("postgres", "user=docker dbname="+dbName+" password=docker sslmode=disable")
 	if err != nil {
 		fmt.Println("init:", err)
-		log.Fatal("init:", err)
+		return nil, fmt.Errorf("could not connect to db: %s", err)
 	}
 	var Dbmap *gorp.DbMap
 	Dbmap = &gorp.DbMap{Db: db, Dialect: gorp.PostgresDialect{}}
@@ -61,7 +58,7 @@ func NewServer(dbName string, config Config) *Server {
 	} else {
 		templates = template.Must(template.ParseFiles("index.html"))
 	}
-	s := &Server{Dbmap: Dbmap, templates: templates, config: config}
+	s = &Server{Dbmap: Dbmap, templates: templates, config: config}
 
 	// static files get served directly
 	if config.Env == "testing" {
@@ -80,7 +77,7 @@ func NewServer(dbName string, config Config) *Server {
 	s.HandleFunc("/overview/{category}/{year}/{month}", s.overviewHandler).Methods("GET")
 	s.HandleFunc("/delete/{date}", s.deleteHandler).Methods("GET")
 	//s.HandleFunc("/csv/{year}/{month}", s.csvHandler).Methods("GET")
-	return s
+	return s, nil
 }
 
 func (s *Server) homeHandler(w http.ResponseWriter, r *http.Request) {
@@ -244,7 +241,7 @@ func (s *Server) overviewHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		jsonEncoder.Encode(all)
 	case "tijden":
-		rows, err := getAllTimes(s, year, month)
+		rows, err := getAllTimes(s.Dbmap, year, month)
 		if err != nil {
 			http.Error(w, DbError.String(), DbError.Code)
 			log.Println("overview tijden getalltimes return:", err)
@@ -256,10 +253,10 @@ func (s *Server) overviewHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func getAllTimes(s *Server, year, month int64) (rows []TimeRow, err error) {
+func getAllTimes(dbmap *gorp.DbMap, year, month int64) (rows []TimeRow, err error) {
 	var all []Times
 	rows = make([]TimeRow, 0)
-	_, err = s.Dbmap.Select(&all, "select * from times where extract (year from date)=$1 and extract (month from date)=$2 order by date desc ", year, month)
+	_, err = dbmap.Select(&all, "select * from times where extract (year from date)=$1 and extract (month from date)=$2 order by date desc ", year, month)
 	if err != nil {
 		return rows, err
 	}
