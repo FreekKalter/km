@@ -120,34 +120,11 @@ func (s *Server) saveHandler(w http.ResponseWriter, r *http.Request) {
 	log.Printf("parsed array of fields to save: %+v\n", fields)
 	//TODO: sanitize input
 
+	//TODO: handle errors returned from save functions below
 	/// Save kilometers
 	SaveKilometers(s.Dbmap, date, fields)
 	// save Times
-	times := new(Times)
-	err = s.Dbmap.SelectOne(times, "select * from times where date=$1", dateStr)
-	log.Println("err na selectONe from times:", err)
-	if err != nil && err.Error() == "sql: no rows in result set" {
-		times := new(Times)
-		times.Date = date
-		times.UpdateObject(dateStr, fields)
-		times.Id = -1
-		log.Printf("object to be insterted: %+v\n", times)
-		err = s.Dbmap.Insert(times)
-	} else if err == nil {
-		log.Printf("times object to update VOOR invoegen van de op te slaan velden: %+v\n", times)
-		err = times.UpdateObject(dateStr, fields)
-		if err != nil {
-			log.Println(err)
-		}
-		log.Printf("times object to update NA invoegen van de op te slaan velden: %+v\n", times)
-		_, err = s.Dbmap.Update(times)
-	}
-	if err != nil {
-		http.Error(w, DbError.String(), DbError.Code)
-		log.Println(err)
-		return
-	}
-	log.Printf("%+v\n", times)
+	SaveTimes(s.Dbmap, date, fields)
 	// sla eerste stand van vandaag op als laatste stand van gister (als die vergeten is)
 }
 func (s *Server) stateHandler(w http.ResponseWriter, r *http.Request) {
