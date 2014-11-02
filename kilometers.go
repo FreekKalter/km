@@ -2,7 +2,6 @@ package km
 
 import (
 	"fmt"
-	"log"
 	"time"
 
 	"github.com/coopernurse/gorp"
@@ -65,15 +64,16 @@ func SaveKilometers(dbmap *gorp.DbMap, date time.Time, fields []Field) (err erro
 			return
 		}
 	} else { // nog niks opgeslagen voor vandaag}
-		log.Println("error after Selectone: ", err)
-		log.Printf("%+v\n", kms)
-		//kms := new(Kilometers)
-		//kms.Date = date
-		//kms.AddFields(fields)
-		//err = dbmap.Insert(kms)
-		//if err != nil {
-		//return
-		//}
+		if err.Error() != "sql: no rows in result set" {
+			return
+		}
+		kms := new(Kilometers)
+		kms.Date = date
+		kms.AddFields(fields)
+		err = dbmap.Insert(kms)
+		if err != nil {
+			return
+		}
 	}
 	return nil
 }
