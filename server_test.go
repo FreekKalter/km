@@ -65,7 +65,8 @@ func TestDelete(t *testing.T) {
 	clearTable(t, "kilometers")
 
 	// add a row, save id
-	todayStr := getTodayString()
+	dayWithoutPadding := "112014" // 1 januray 2014 (without padding day and month)
+	goodDate := time.Date(2014, time.January, 1, 0, 0, 0, 0, time.UTC)
 	now := time.Now()
 	k := Kilometers{Date: now, Begin: 1234}
 	err := db.Insert(&k)
@@ -80,13 +81,14 @@ func TestDelete(t *testing.T) {
 		NewTestCombo("/delete/-1", InvalidId),
 		// delete saved row, compare returned id
 		NewTestCombo("/delete/"+id, InvalidId),
-		NewTestCombo("/delete/"+todayStr, Response{Code: 200}),
+		NewTestCombo("/delete/"+dayWithoutPadding, InvalidId),
+		NewTestCombo("/delete/"+dateFormat(goodDate), Response{Code: 200}),
 	}
 	tableDrivenTest(t, table)
 }
-func getTodayString() string {
-	today := time.Now()
-	return fmt.Sprintf("%d%d%d", today.Day(), today.Month(), today.Year())
+
+func dateFormat(t time.Time) string {
+	return fmt.Sprintf("%02d%02d%d", t.Day(), t.Month(), t.Year())
 }
 
 func TestSaveReturnCodes(t *testing.T) {
@@ -96,7 +98,8 @@ func TestSaveReturnCodes(t *testing.T) {
 		NewTestCombo("/save", NotFound),
 		NewTestCombo("/save/a", NotFound),
 	}
-	todayStr := getTodayString()
+	goodDate := time.Date(2014, time.January, 1, 0, 0, 0, 0, time.UTC)
+	todayStr := dateFormat(goodDate)
 	req, _ := http.NewRequest("POST", "/save/kilometers/today", strings.NewReader(`{"Name": "Begin", "Value": 1234}`))
 	table = append(table, &TestCombo{req, Response{Code: 404}})
 
@@ -124,7 +127,8 @@ func TestHome(t *testing.T) {
 }
 
 func TestState(t *testing.T) {
-	todayStr := getTodayString()
+	goodDate := time.Date(2014, time.January, 1, 0, 0, 0, 0, time.UTC)
+	dateStr := dateFormat(goodDate)
 	now := time.Now()
 	k := Kilometers{Date: now, Begin: 1234}
 	err := db.Insert(&k)
@@ -135,17 +139,17 @@ func TestState(t *testing.T) {
 		NewTestCombo("/state", NotFound),
 		NewTestCombo("/state/2234a", InvalidId),
 		NewTestCombo("/state/today", InvalidId),
-		NewTestCombo("/state/"+todayStr, Response{Code: 200}),
+		NewTestCombo("/state/"+dateStr, Response{Code: 200}),
 	}
 	tableDrivenTest(t, table)
 
-	req, _ := http.NewRequest("GET", "/state/"+todayStr, nil)
+	req, _ := http.NewRequest("GET", "/state/"+dateStr, nil)
 	w := httptest.NewRecorder()
 	s.ServeHTTP(w, req)
 	var unMarschalled interface{}
 	err = json.Unmarshal(w.Body.Bytes(), &unMarschalled)
 	if err != nil {
-		t.Fatal("/state/"+todayStr+" not a valid json response:", err)
+		t.Fatal("/state/"+dateStr+" not a valid json response:", err)
 	}
 }
 
