@@ -6,4 +6,8 @@ go:
   - 1.3
   - tip
 
-script: go test -v ./...
+before_script:
+    - go get -t .
+
+script:
+    - go test -v ./...
