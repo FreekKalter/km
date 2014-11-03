@@ -15,6 +15,22 @@ type Times struct {
 	Begin, CheckIn, CheckOut, Laatste int64
 }
 
+type TimeRow struct {
+	Id                                int64
+	Date                              time.Time
+	Begin, CheckIn, CheckOut, Laatste string
+	Hours                             float64
+}
+
+func NewTimeRow() TimeRow {
+	var t TimeRow
+	t.Begin = "-"
+	t.CheckIn = "-"
+	t.CheckOut = "-"
+	t.Laatste = "-"
+	return t
+}
+
 func (t *Times) UpdateObject(date string, fields []Field) error {
 	loc, _ := time.LoadLocation("Europe/Amsterdam") // should not be hardcoded but idgaf
 	for _, field := range fields {
@@ -71,4 +87,40 @@ func SaveTimes(dbmap *gorp.DbMap, date time.Time, fields []Field) (err error) {
 		return
 	}
 	return nil
+}
+
+func GetAllTimes(dbmap *gorp.DbMap, year, month int64) (rows []TimeRow, err error) {
+	var all []Times
+	rows = make([]TimeRow, 0)
+	_, err = dbmap.Select(&all, "select * from times where extract (year from date)=$1 and extract (month from date)=$2 order by date desc ", year, month)
+	if err != nil {
+		return rows, err
+	}
+	loc, err := time.LoadLocation("Europe/Amsterdam") // should not be hardcoded but idgaf
+	if err != nil {
+		log.Println(err)
+	}
+	for _, c := range all {
+		row := NewTimeRow()
+		row.Id = c.Id
+		row.Date = c.Date
+		if c.Begin != 0 {
+			row.Begin = time.Unix(c.Begin, 0).In(loc).Format("15:04")
+		}
+		if c.CheckIn != 0 {
+			row.CheckIn = time.Unix(c.CheckIn, 0).In(loc).Format("15:04")
+		}
+		if c.CheckOut != 0 {
+			row.CheckOut = time.Unix(c.CheckOut, 0).In(loc).Format("15:04")
+		}
+		if c.Laatste != 0 {
+			row.Laatste = time.Unix(c.Laatste, 0).In(loc).Format("15:04")
+
+		}
+		if hours := (time.Duration(c.CheckOut-c.CheckIn) * time.Second).Hours(); hours > 0 && hours < 24 {
+			row.Hours = hours
+		}
+		rows = append(rows, row)
+	}
+	return rows, nil
 }

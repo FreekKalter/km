@@ -5,9 +5,7 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
-	"time"
 
-	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/coopernurse/gorp"
 	_ "github.com/lib/pq"
 )
@@ -219,31 +217,5 @@ func TestNewTimeRow(t *testing.T) {
 	tt := TimeRow{Begin: "-", CheckIn: "-", CheckOut: "-", Laatste: "-"}
 	if tr != tt {
 		t.Error("NewTimeRow should return a TimeRow struct with all fields initialized to '-'")
-	}
-}
-
-func TestGetAllTimes(t *testing.T) {
-	err, dbmap, columns := MockSetup("times")
-	if err != nil {
-		t.Errorf("setting up mock db: %s", err.Error())
-	}
-	var year, month int64 = 2014, 1
-	date1 := time.Date(2014, time.January, 1, 0, 0, 0, 0, time.UTC)
-	sqlmock.ExpectQuery("select \\* from times where (.+)").
-		WithArgs(year, month).
-		WillReturnRows(sqlmock.NewRows(columns).AddRow(1, date1, 1388577600, 0, 0, 0))
-	rows, err := getAllTimes(dbmap, year, month)
-	if err != nil {
-		t.Errorf("getAllTimes returned: %s", err)
-	}
-	if len(rows) != 1 {
-		t.Errorf("getAlltimes returned unexpected number of rows")
-	}
-	rowExpected := TimeRow{Id: 1, Date: date1, Begin: "13:00", CheckIn: "-", CheckOut: "-", Laatste: "-"}
-	if rows[0] != rowExpected {
-		t.Errorf("row expected: %+v, got: %+v", rowExpected, rows[0])
-	}
-	if err = dbmap.Db.Close(); err != nil {
-		t.Errorf("Error '%s' was not expected while closing the database", err)
 	}
 }

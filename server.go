@@ -241,7 +241,7 @@ func (s *Server) overviewHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		jsonEncoder.Encode(all)
 	case "tijden":
-		rows, err := getAllTimes(s.Dbmap, year, month)
+		rows, err := GetAllTimes(s.Dbmap, year, month)
 		if err != nil {
 			http.Error(w, DbError.String(), DbError.Code)
 			log.Println("overview tijden getalltimes return:", err)
@@ -252,66 +252,6 @@ func (s *Server) overviewHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 }
-
-func getAllTimes(dbmap *gorp.DbMap, year, month int64) (rows []TimeRow, err error) {
-	var all []Times
-	rows = make([]TimeRow, 0)
-	_, err = dbmap.Select(&all, "select * from times where extract (year from date)=$1 and extract (month from date)=$2 order by date desc ", year, month)
-	if err != nil {
-		return rows, err
-	}
-	loc, err := time.LoadLocation("Europe/Amsterdam") // should not be hardcoded but idgaf
-	if err != nil {
-		log.Println(err)
-	}
-	for _, c := range all {
-		row := NewTimeRow()
-		row.Id = c.Id
-		row.Date = c.Date
-		if c.Begin != 0 {
-			row.Begin = time.Unix(c.Begin, 0).In(loc).Format("15:04")
-		}
-		if c.CheckIn != 0 {
-			row.CheckIn = time.Unix(c.CheckIn, 0).In(loc).Format("15:04")
-		}
-		if c.CheckOut != 0 {
-			row.CheckOut = time.Unix(c.CheckOut, 0).In(loc).Format("15:04")
-		}
-		if c.Laatste != 0 {
-			row.Laatste = time.Unix(c.Laatste, 0).In(loc).Format("15:04")
-
-		}
-		if hours := (time.Duration(c.CheckOut-c.CheckIn) * time.Second).Hours(); hours > 0 && hours < 24 {
-			row.Hours = hours
-		}
-		rows = append(rows, row)
-	}
-	return rows, nil
-}
-
-//func (s *Server) csvHandler(w http.ResponseWriter, r *http.Request) {
-//vars := mux.Vars(r)
-//month, err := strconv.ParseInt(vars["month"], 10, 64)
-//if err != nil {
-//http.Error(w, InvalidUrl.String(), InvalidUrl.Code)
-//log.Println("overview:", err)
-//return
-//}
-//year, err := strconv.ParseInt(vars["year"], 10, 64)
-//if err != nil {
-//http.Error(w, InvalidUrl.String(), InvalidUrl.Code)
-//log.Println("overview:", err)
-//return
-//}
-//times, err := getAllTimes(s, year, month)
-//if err != nil {
-//http.Error(w, DbError.String(), DbError.Code)
-//log.Println("overview:", err)
-//}
-//for _, t := range times {
-//fmt.Fprintf(w, "%s,%s,%s,%.1f\n", t.Date.Format("Mon 2"), t.CheckIn, t.CheckOut, t.Hours)
-//}
-//}
 
 func (s *Server) deleteHandler(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
@@ -341,20 +281,4 @@ func (s *Server) deleteHandler(w http.ResponseWriter, r *http.Request) {
 func getDateStr() string {
 	now := time.Now().UTC()
 	return fmt.Sprintf("%d-%d-%d", now.Month(), now.Day(), now.Year())
-}
-
-type TimeRow struct {
-	Id                                int64
-	Date                              time.Time
-	Begin, CheckIn, CheckOut, Laatste string
-	Hours                             float64
-}
-
-func NewTimeRow() TimeRow {
-	var t TimeRow
-	t.Begin = "-"
-	t.CheckIn = "-"
-	t.CheckOut = "-"
-	t.Laatste = "-"
-	return t
 }
