@@ -1,12 +1,8 @@
 package km
 
 import (
-	"encoding/json"
-	"fmt"
-
 	"net/http"
 	"net/http/httptest"
-	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -48,6 +44,7 @@ func TestServerInitErrors(t *testing.T) {
 	}
 
 }
+
 func clearTable(t *testing.T, tableName string) {
 	_, err := db.Exec("truncate kilometers")
 	if err != nil {
@@ -90,113 +87,113 @@ func NewTestCombo(url string, resp Response) *TestCombo {
 	return &TestCombo{req, resp}
 }
 
-func TestDelete(t *testing.T) {
-	initServer(t)
-	clearTable(t, "kilometers")
+//func TestDelete(t *testing.T) {
+//initServer(t)
+//clearTable(t, "kilometers")
 
-	// add a row, save id
-	dayWithoutPadding := "112014" // 1 januray 2014 (without padding day and month)
-	goodDate := time.Date(2014, time.January, 1, 0, 0, 0, 0, time.UTC)
-	now := time.Now()
-	k := Kilometers{Date: now, Begin: 1234}
-	err := db.Insert(&k)
-	if err != nil {
-		t.Fatal("TestDelete: dberror on insert", err)
-	}
-	id := strconv.FormatInt(k.Id, 10)
+//// add a row, save id
+//dayWithoutPadding := "112014" // 1 januray 2014 (without padding day and month)
+//goodDate := time.Date(2014, time.January, 1, 0, 0, 0, 0, time.UTC)
+//now := time.Now()
+//k := Kilometers{Date: now, Begin: 1234}
+//err := db.Insert(&k)
+//if err != nil {
+//t.Fatal("TestDelete: dberror on insert", err)
+//}
+//id := strconv.FormatInt(k.Id, 10)
 
-	var table []*TestCombo = []*TestCombo{
-		NewTestCombo("/delete/1", InvalidId),
-		NewTestCombo("/delete/a", InvalidId),
-		NewTestCombo("/delete/-1", InvalidId),
-		// delete saved row, compare returned id
-		NewTestCombo("/delete/"+id, InvalidId),
-		NewTestCombo("/delete/"+dayWithoutPadding, InvalidId),
-		NewTestCombo("/delete/"+dateFormat(goodDate), Response{Code: 200}),
-	}
-	tableDrivenTest(t, table)
-}
+//var table []*TestCombo = []*TestCombo{
+//NewTestCombo("/delete/1", InvalidId),
+//NewTestCombo("/delete/a", InvalidId),
+//NewTestCombo("/delete/-1", InvalidId),
+//// delete saved row, compare returned id
+//NewTestCombo("/delete/"+id, InvalidId),
+//NewTestCombo("/delete/"+dayWithoutPadding, InvalidId),
+//NewTestCombo("/delete/"+dateFormat(goodDate), Response{Code: 200}),
+//}
+//tableDrivenTest(t, table)
+//}
 
-func dateFormat(t time.Time) string {
-	return fmt.Sprintf("%02d%02d%d", t.Day(), t.Month(), t.Year())
-}
+//func dateFormat(t time.Time) string {
+//return fmt.Sprintf("%02d%02d%d", t.Day(), t.Month(), t.Year())
+//}
 
-func TestSaveReturnCodes(t *testing.T) {
-	initServer(t)
-	clearTable(t, "kilometers")
+//func TestSaveReturnCodes(t *testing.T) {
+//initServer(t)
+//clearTable(t, "kilometers")
 
-	goodDate := time.Date(2014, time.January, 1, 0, 0, 0, 0, time.UTC)
-	todayStr := dateFormat(goodDate)
-	var table []*TestCombo = []*TestCombo{
-		NewTestCombo("/save", NotFound),
-		NewTestCombo("/save/a", NotFound),         // only respond to post not get
-		NewTestCombo("/save/"+todayStr, NotFound), // only respond to post not get
-	}
-	req, _ := http.NewRequest("POST", "/save/kilometers/today", strings.NewReader(`{"Name": "Begin", "Value": 1234}`))
-	table = append(table, &TestCombo{req, Response{Code: 404}})
+//goodDate := time.Date(2014, time.January, 1, 0, 0, 0, 0, time.UTC)
+//todayStr := dateFormat(goodDate)
+//var table []*TestCombo = []*TestCombo{
+//NewTestCombo("/save", NotFound),
+//NewTestCombo("/save/a", NotFound),         // only respond to post not get
+//NewTestCombo("/save/"+todayStr, NotFound), // only respond to post not get
+//}
+//req, _ := http.NewRequest("POST", "/save/kilometers/today", strings.NewReader(`{"Name": "Begin", "Value": 1234}`))
+//table = append(table, &TestCombo{req, Response{Code: 404}})
 
-	req, _ = http.NewRequest("POST", "/save/"+todayStr, strings.NewReader(`{"Name": "Begin", "Km": "abc"}`))
-	table = append(table, &TestCombo{req, NotParsable})
+//req, _ = http.NewRequest("POST", "/save/"+todayStr, strings.NewReader(`{"Name": "Begin", "Km": "abc"}`))
+//table = append(table, &TestCombo{req, NotParsable})
 
-	req, _ = http.NewRequest("POST", "/save/"+todayStr, strings.NewReader(`{"Name": "InvalidFieldname", "Km": 1234}`))
-	table = append(table, &TestCombo{req, NotParsable})
+//req, _ = http.NewRequest("POST", "/save/"+todayStr, strings.NewReader(`{"Name": "InvalidFieldname", "Km": 1234}`))
+//table = append(table, &TestCombo{req, NotParsable})
 
-	req, _ = http.NewRequest("POST", "/save/"+todayStr, strings.NewReader(""))
-	table = append(table, &TestCombo{req, NotParsable})
+//req, _ = http.NewRequest("POST", "/save/"+todayStr, strings.NewReader(""))
+//table = append(table, &TestCombo{req, NotParsable})
 
-	req, _ = http.NewRequest("POST", "/save/blaat", strings.NewReader(`{"Name": "Begin", "Km": 1234}`))
-	table = append(table, &TestCombo{req, InvalidId})
+//req, _ = http.NewRequest("POST", "/save/blaat", strings.NewReader(`{"Name": "Begin", "Km": 1234}`))
+//table = append(table, &TestCombo{req, InvalidId})
 
-	tableDrivenTest(t, table)
-}
+//tableDrivenTest(t, table)
+//}
 
-func TestHome(t *testing.T) {
-	initServer(t)
-	var table []*TestCombo = []*TestCombo{
-		NewTestCombo("/", Response{Code: 200}),
-	}
-	tableDrivenTest(t, table)
-}
+//func TestHome(t *testing.T) {
+//initServer(t)
+//var table []*TestCombo = []*TestCombo{
+//NewTestCombo("/", Response{Code: 200}),
+//}
+//tableDrivenTest(t, table)
+//}
 
-func TestState(t *testing.T) {
-	initServer(t)
-	goodDate := time.Date(2014, time.January, 1, 0, 0, 0, 0, time.UTC)
-	dateStr := dateFormat(goodDate)
-	now := time.Now()
-	k := Kilometers{Date: now, Begin: 1234}
-	err := db.Insert(&k)
-	if err != nil {
-		t.Fatal("TestDelete: dberror on insert", err)
-	}
-	var table []*TestCombo = []*TestCombo{
-		NewTestCombo("/state", NotFound),
-		NewTestCombo("/state/2234a", InvalidId),
-		NewTestCombo("/state/today", InvalidId),
-		NewTestCombo("/state/"+dateStr, Response{Code: 200}),
-	}
-	tableDrivenTest(t, table)
+//func TestState(t *testing.T) {
+//initServer(t)
+//goodDate := time.Date(2014, time.January, 1, 0, 0, 0, 0, time.UTC)
+//dateStr := dateFormat(goodDate)
+//now := time.Now()
+//k := Kilometers{Date: now, Begin: 1234}
+//err := db.Insert(&k)
+//if err != nil {
+//t.Fatal("TestDelete: dberror on insert", err)
+//}
+//var table []*TestCombo = []*TestCombo{
+//NewTestCombo("/state", NotFound),
+//NewTestCombo("/state/2234a", InvalidId),
+//NewTestCombo("/state/today", InvalidId),
+//NewTestCombo("/state/"+dateStr, Response{Code: 200}),
+//}
+//tableDrivenTest(t, table)
 
-	req, _ := http.NewRequest("GET", "/state/"+dateStr, nil)
-	w := httptest.NewRecorder()
-	s.ServeHTTP(w, req)
-	var unMarschalled interface{}
-	err = json.Unmarshal(w.Body.Bytes(), &unMarschalled)
-	if err != nil {
-		t.Fatal("/state/"+dateStr+" not a valid json response:", err)
-	}
-}
+//req, _ := http.NewRequest("GET", "/state/"+dateStr, nil)
+//w := httptest.NewRecorder()
+//s.ServeHTTP(w, req)
+//var unMarschalled interface{}
+//err = json.Unmarshal(w.Body.Bytes(), &unMarschalled)
+//if err != nil {
+//t.Fatal("/state/"+dateStr+" not a valid json response:", err)
+//}
+//}
 
-func TestOverview(t *testing.T) {
-	initServer(t)
-	var table []*TestCombo = []*TestCombo{
-		NewTestCombo("/overview", NotFound),
-		NewTestCombo("/overview/invalidCategory/2013/01", InvalidUrl),
-		NewTestCombo("/overview/tijden/201a/01", InvalidUrl),
-		NewTestCombo("/overview/tijden/2013/0a", InvalidUrl),
-		NewTestCombo("/overview/1/2013/01", InvalidUrl),
-	}
-	tableDrivenTest(t, table)
-}
+//func TestOverview(t *testing.T) {
+//initServer(t)
+//var table []*TestCombo = []*TestCombo{
+//NewTestCombo("/overview", NotFound),
+//NewTestCombo("/overview/invalidCategory/2013/01", InvalidUrl),
+//NewTestCombo("/overview/tijden/201a/01", InvalidUrl),
+//NewTestCombo("/overview/tijden/2013/0a", InvalidUrl),
+//NewTestCombo("/overview/1/2013/01", InvalidUrl),
+//}
+//tableDrivenTest(t, table)
+//}
 
 func BenchmarkSave(b *testing.B) {
 	req, _ := http.NewRequest("POST", "/save", strings.NewReader(`{"Name": "Begin", "Value": 1234}`))
