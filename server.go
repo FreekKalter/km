@@ -89,6 +89,12 @@ func (s *Server) homeHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+type State struct {
+	Fields       []Field
+	LastDayError string
+	LastDayKm    int
+}
+
 func (s *Server) saveHandler(w http.ResponseWriter, r *http.Request) {
 	// parse date
 	vars := mux.Vars(r)
@@ -119,11 +125,20 @@ func (s *Server) saveHandler(w http.ResponseWriter, r *http.Request) {
 
 	//TODO: handle errors returned from save functions below
 	/// Save kilometers
-	SaveKilometers(s.Dbmap, date, fields)
+	err = SaveKilometers(s.Dbmap, date, fields)
+	if err != nil {
+		response := err.(Response)
+		http.Error(w, response.Error(), response.Code)
+	}
 	// save Times
-	SaveTimes(s.Dbmap, date, fields)
+	err = SaveTimes(s.Dbmap, date, fields)
+	if err != nil {
+		response := err.(Response)
+		http.Error(w, response.Error(), response.Code)
+	}
 	// sla eerste stand van vandaag op als laatste stand van gister (als die vergeten is)
 }
+
 func (s *Server) stateHandler(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	date, err := time.Parse("02012006", vars["date"])
@@ -133,31 +148,28 @@ func (s *Server) stateHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	dateStr := fmt.Sprintf("%d-%d-%d", date.Month(), date.Day(), date.Year())
-	type State struct {
-		Fields       []Field
-		LastDayError string
-		LastDayKm    int
+	err, state := getState(s.Dbmap, dateStr)
+	if err != nil {
+		response := err.(Response)
+		http.Error(w, response.Error(), response.Code)
 	}
-	var state State
-	state.Fields = make([]Field, 4)
+	jsonEncoder := json.NewEncoder(w)
+	jsonEncoder.Encode(state)
+}
 
+func getState(dbmap *gorp.DbMap, dateStr string) (err error, state State) {
+	state.Fields = make([]Field, 4)
 	// Get data save for this date
 	var today Kilometers
-	err = s.Dbmap.SelectOne(&today, "select * from kilometers where date=$1", dateStr)
-	log.Println(err)
+	err = dbmap.SelectOne(&today, "select * from kilometers where date=$1", dateStr)
 	switch {
 	case err != nil && err.Error() != "sql: no rows in result set":
-		http.Error(w, DbError.String(), DbError.Code)
-		log.Println("stateHandler:", err)
-		return
+		return CustomResponse(DbError, err), State{}
 	case err != nil && err.Error() == "sql: no rows in result set": // today not saved yet
-		log.Println("no today")
 		var lastDay Kilometers
-		err := s.Dbmap.SelectOne(&lastDay, "select * from kilometers where date = (select max(date) as date from kilometers)")
+		err := dbmap.SelectOne(&lastDay, "select * from kilometers where date = (select max(date) as date from kilometers)")
 		if err != nil {
-			http.Error(w, "Database error", 500)
-			log.Println("stateHandler:", err)
-			return
+			return CustomResponse(DbError, err), State{}
 		}
 		if lastDay != (Kilometers{}) { // Nothing in db yet
 			log.Println("nothing in db yet for todag:", dateStr)
@@ -168,7 +180,7 @@ func (s *Server) stateHandler(w http.ResponseWriter, r *http.Request) {
 			state.Fields[3] = Field{Name: "Terug"}
 		}
 		var lastDayTimes Times
-		err = s.Dbmap.SelectOne(&lastDayTimes, "select * from times where date=(select max(date) as date from times)")
+		err = dbmap.SelectOne(&lastDayTimes, "select * from times where date=(select max(date) as date from times)")
 		log.Println("na select laatste tijden:", err, lastDayTimes)
 		if lastDayTimes.CheckIn == 0 || lastDayTimes.CheckOut == 0 {
 			state.LastDayError = fmt.Sprintf("input/%02d%02d%04d", lastDayTimes.Date.Day(), lastDayTimes.Date.Month(), lastDayTimes.Date.Year())
@@ -177,11 +189,8 @@ func (s *Server) stateHandler(w http.ResponseWriter, r *http.Request) {
 	default: // Something is already filled in for today
 		log.Println("today:", today)
 		var times Times
-		err = s.Dbmap.SelectOne(&times, "select * from times where date=$1", dateStr)
-		loc, err := time.LoadLocation("Europe/Amsterdam") // should not be hardcoded but idgaf
-		if err != nil {
-			log.Println(err)
-		}
+		err = dbmap.SelectOne(&times, "select * from times where date=$1", dateStr)
+		loc, _ := time.LoadLocation("Europe/Amsterdam") // should not be hardcoded but idgaf
 		convertTime := func(t int64) string {
 			ret := ""
 			if t != 0 {
@@ -196,11 +205,8 @@ func (s *Server) stateHandler(w http.ResponseWriter, r *http.Request) {
 		log.Printf("state: %+v", state)
 
 		var lastDayTimes []Times
-		_, err = s.Dbmap.Select(&lastDayTimes, "select * from times order by date desc limit 2")
-		if err != nil {
-			log.Println("probeer laatste twee tijden op te halen:", err)
-		}
-		if len(lastDayTimes) > 1 {
+		_, err = dbmap.Select(&lastDayTimes, "select * from times order by date desc limit 2")
+		if err != nil && len(lastDayTimes) > 1 {
 			log.Println("tijden van gisteren, (vandaag al half ingevuld):", err, lastDayTimes[1])
 			if lastDayTimes[1].CheckIn == 0 || lastDayTimes[1].CheckOut == 0 {
 				state.LastDayError = fmt.Sprintf("input/%02d%02d%04d", lastDayTimes[1].Date.Day(), lastDayTimes[1].Date.Month(), lastDayTimes[1].Date.Year())
@@ -208,8 +214,7 @@ func (s *Server) stateHandler(w http.ResponseWriter, r *http.Request) {
 
 		}
 	}
-	jsonEncoder := json.NewEncoder(w)
-	jsonEncoder.Encode(state)
+	return nil, state
 }
 
 func (s *Server) overviewHandler(w http.ResponseWriter, r *http.Request) {

@@ -1,13 +1,19 @@
 package km
 
+import "fmt"
 import "regexp"
 
 type Response struct {
 	Code  int
 	Regex *regexp.Regexp
+	Extra string
 }
 
-func (r *Response) String() string {
+func (r Response) String() string {
+	return fmt.Sprintf("%s : %s", r.Regex.String(), r.Extra)
+}
+
+func (r Response) Error() string {
 	return r.Regex.String()
 }
 
@@ -25,3 +31,9 @@ var NotParsable Response = newResponse("could not parse request\n", 400)
 var InvalidId Response = newResponse("invalid id\n", 400)
 var InvalidUrl Response = newResponse("invalid url", 400)
 var DbError Response = newResponse("database eror", 500)
+
+func CustomResponse(r Response, err error) Response {
+	ret := r
+	ret.Extra = err.Error()
+	return ret
+}

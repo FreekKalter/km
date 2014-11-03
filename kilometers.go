@@ -61,18 +61,18 @@ func SaveKilometers(dbmap *gorp.DbMap, date time.Time, fields []Field) (err erro
 		kms.AddFields(fields)
 		_, err = dbmap.Update(kms)
 		if err != nil {
-			return
+			return CustomResponse(DbError, err)
 		}
 	} else { // nog niks opgeslagen voor vandaag}
 		if err.Error() != "sql: no rows in result set" {
-			return
+			return CustomResponse(DbError, err)
 		}
 		kms := new(Kilometers)
 		kms.Date = date
 		kms.AddFields(fields)
 		err = dbmap.Insert(kms)
 		if err != nil {
-			return
+			return CustomResponse(DbError, err)
 		}
 	}
 	return nil

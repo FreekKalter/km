@@ -145,13 +145,13 @@ func NewTestCombo(url string, resp Response) *TestCombo {
 //tableDrivenTest(t, table)
 //}
 
-//func TestHome(t *testing.T) {
-//initServer(t)
-//var table []*TestCombo = []*TestCombo{
-//NewTestCombo("/", Response{Code: 200}),
-//}
-//tableDrivenTest(t, table)
-//}
+func TestHome(t *testing.T) {
+	initServer(t)
+	var table []*TestCombo = []*TestCombo{
+		NewTestCombo("/", Response{Code: 200}),
+	}
+	tableDrivenTest(t, table)
+}
 
 //func TestState(t *testing.T) {
 //initServer(t)
