@@ -1,11 +1,15 @@
 package km
 
 import (
+	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"reflect"
 	"strings"
 	"testing"
+	"time"
 
+	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/coopernurse/gorp"
 	_ "github.com/lib/pq"
 )
@@ -152,6 +156,67 @@ func TestHome(t *testing.T) {
 	}
 	tableDrivenTest(t, table)
 }
+
+func TestGetStateSuccessfulWithTodayPartialySaved(t *testing.T) {
+	err, dbmap, kiloColumns := MockSetup("kilometers")
+	if err != nil {
+		t.Error(err)
+	}
+	timeColumns := []string{"Id", "Date", "Begin", "CheckIn", "CheckOut", "Laatste"}
+	date := time.Date(2014, time.January, 1, 0, 0, 0, 0, time.UTC)
+	dateStr := fmt.Sprintf("%d-%d-%d", date.Month(), date.Day(), date.Year())
+	sqlmock.ExpectQuery("select \\* from kilometers where date=(.+)").
+		WithArgs("1-1-2014").
+		WillReturnRows(sqlmock.NewRows(kiloColumns).AddRow(1, date, 12345, 12346, 12347, 0, ""))
+	sqlmock.ExpectQuery("select \\* from times where date=(.+)").
+		WithArgs("1-1-2014").
+		WillReturnRows(sqlmock.NewRows(timeColumns).AddRow(1, date, 1388577600, 1388577720, 0, 0))
+	sqlmock.ExpectQuery("select \\* from times order by date desc limit 2").
+		WillReturnRows(sqlmock.NewRows(timeColumns).
+		AddRow(1, date, 1388577600, 1388577720, 0, 0).
+		AddRow(1, date, 0, 0, 0, 0))
+
+	err, state := GetState(dbmap, dateStr)
+	if err != nil {
+		t.Errorf("GetState returned unexpected: %s", err)
+	}
+	emptyState := State{Fields: make([]Field, 0)}
+	if reflect.DeepEqual(state, emptyState) {
+		t.Errorf("GetState returned empty")
+	}
+	if err = dbmap.Db.Close(); err != nil {
+		t.Errorf("Error '%s' was not expected while closing the database", err)
+	}
+}
+
+func TestGetStateSuccessfulWithNoDataForToday(t *testing.T) {
+	err, dbmap, kiloColumns := MockSetup("kilometers")
+	if err != nil {
+		t.Error(err)
+	}
+	//timeColumns := []string{"Id", "Date", "Begin", "CheckIn", "CheckOut", "Laatste"}
+	date := time.Date(2014, time.January, 1, 0, 0, 0, 0, time.UTC)
+	dateStr := fmt.Sprintf("%d-%d-%d", date.Month(), date.Day(), date.Year())
+	sqlmock.ExpectQuery("select \\* from kilometers where date=(.+)").
+		WithArgs("1-1-2014").
+		WillReturnRows(sqlmock.NewRows(kiloColumns).FromCSVString(""))
+	sqlmock.ExpectQuery("select \\* from kilometers where date =(.+)").
+		WillReturnRows(sqlmock.NewRows(kiloColumns).AddRow(1, date, 12345, 12346, 12347, 0, ""))
+
+	err, state := GetState(dbmap, dateStr)
+	if err != nil {
+		t.Errorf("GetState returned unexpected: %s", err)
+	}
+	emptyState := State{Fields: make([]Field, 0)}
+	if reflect.DeepEqual(state, emptyState) {
+		t.Errorf("GetState returned empty")
+	}
+	if err = dbmap.Db.Close(); err != nil {
+		t.Errorf("Error '%s' was not expected while closing the database", err)
+	}
+}
+
+//TODO: Make it all fail for GetState to actualy test it
 
 //func TestState(t *testing.T) {
 //initServer(t)

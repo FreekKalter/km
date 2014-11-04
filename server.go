@@ -123,7 +123,6 @@ func (s *Server) saveHandler(w http.ResponseWriter, r *http.Request) {
 	log.Printf("parsed array of fields to save: %+v\n", fields)
 	//TODO: sanitize input
 
-	//TODO: handle errors returned from save functions below
 	/// Save kilometers
 	err = SaveKilometers(s.Dbmap, date, fields)
 	if err != nil {
@@ -148,7 +147,7 @@ func (s *Server) stateHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	dateStr := fmt.Sprintf("%d-%d-%d", date.Month(), date.Day(), date.Year())
-	err, state := getState(s.Dbmap, dateStr)
+	err, state := GetState(s.Dbmap, dateStr)
 	if err != nil {
 		response := err.(Response)
 		http.Error(w, response.Error(), response.Code)
@@ -157,7 +156,7 @@ func (s *Server) stateHandler(w http.ResponseWriter, r *http.Request) {
 	jsonEncoder.Encode(state)
 }
 
-func getState(dbmap *gorp.DbMap, dateStr string) (err error, state State) {
+func GetState(dbmap *gorp.DbMap, dateStr string) (err error, state State) {
 	state.Fields = make([]Field, 4)
 	// Get data save for this date
 	var today Kilometers
@@ -190,6 +189,9 @@ func getState(dbmap *gorp.DbMap, dateStr string) (err error, state State) {
 		log.Println("today:", today)
 		var times Times
 		err = dbmap.SelectOne(&times, "select * from times where date=$1", dateStr)
+		if err != nil {
+			return CustomResponse(DbError, err), State{}
+		}
 		loc, _ := time.LoadLocation("Europe/Amsterdam") // should not be hardcoded but idgaf
 		convertTime := func(t int64) string {
 			ret := ""
@@ -206,7 +208,10 @@ func getState(dbmap *gorp.DbMap, dateStr string) (err error, state State) {
 
 		var lastDayTimes []Times
 		_, err = dbmap.Select(&lastDayTimes, "select * from times order by date desc limit 2")
-		if err != nil && len(lastDayTimes) > 1 {
+		if err != nil {
+			return CustomResponse(DbError, err), State{}
+		}
+		if len(lastDayTimes) > 1 {
 			log.Println("tijden van gisteren, (vandaag al half ingevuld):", err, lastDayTimes[1])
 			if lastDayTimes[1].CheckIn == 0 || lastDayTimes[1].CheckOut == 0 {
 				state.LastDayError = fmt.Sprintf("input/%02d%02d%04d", lastDayTimes[1].Date.Day(), lastDayTimes[1].Date.Month(), lastDayTimes[1].Date.Year())
