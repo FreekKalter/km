@@ -6,6 +6,7 @@ go:
   - tip
 
 install:
+    - go get -t .
     - go get -v code.google.com/p/go.tools/cmd/cover
 script:
     - go test -v . -covermode=count -coverprofile=profile.cov
