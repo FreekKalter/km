@@ -1,6 +1,7 @@
 package km
 
 import (
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -116,9 +117,9 @@ func NewTestCombo(url string, resp Response) *TestCombo {
 //tableDrivenTest(t, table)
 //}
 
-//func dateFormat(t time.Time) string {
-//return fmt.Sprintf("%02d%02d%d", t.Day(), t.Month(), t.Year())
-//}
+func dateFormat(t time.Time) string {
+	return fmt.Sprintf("%02d%02d%d", t.Day(), t.Month(), t.Year())
+}
 
 //func TestSaveReturnCodes(t *testing.T) {
 //initServer(t)
@@ -216,35 +217,52 @@ func TestGetStateSuccessfulWithNoDataForToday(t *testing.T) {
 	}
 }
 
+func GetStateMock(dbmap *gorp.DbMap, dateStr string) (err error, state State) {
+	if dateStr == "1-1-2014" {
+		return nil, State{}
+	} else {
+		return DbError, State{}
+	}
+}
+
+func GetStateMockAlwaysError(dbmap *gorp.DbMap, dateStr string) (err error, state State) {
+	return DbError, State{}
+}
+
 //TODO: Make it all fail for GetState to actualy test it
 
-//func TestState(t *testing.T) {
-//initServer(t)
-//goodDate := time.Date(2014, time.January, 1, 0, 0, 0, 0, time.UTC)
-//dateStr := dateFormat(goodDate)
-//now := time.Now()
-//k := Kilometers{Date: now, Begin: 1234}
-//err := db.Insert(&k)
-//if err != nil {
-//t.Fatal("TestDelete: dberror on insert", err)
-//}
-//var table []*TestCombo = []*TestCombo{
-//NewTestCombo("/state", NotFound),
-//NewTestCombo("/state/2234a", InvalidId),
-//NewTestCombo("/state/today", InvalidId),
-//NewTestCombo("/state/"+dateStr, Response{Code: 200}),
-//}
-//tableDrivenTest(t, table)
+func TestStateHandler(t *testing.T) {
+	initServer(t)
+	s.StateFunc = GetStateMock
+	goodDate := time.Date(2014, time.January, 1, 0, 0, 0, 0, time.UTC)
+	dateStr := dateFormat(goodDate)
+	var table []*TestCombo = []*TestCombo{
+		NewTestCombo("/state", NotFound),
+		NewTestCombo("/state/2234a", InvalidId),
+		NewTestCombo("/state/today", InvalidId),
+		//NewTestCombo("/state/"+dateStr, Response{Code: 200}),
+	}
+	tableDrivenTest(t, table)
 
-//req, _ := http.NewRequest("GET", "/state/"+dateStr, nil)
-//w := httptest.NewRecorder()
-//s.ServeHTTP(w, req)
-//var unMarschalled interface{}
-//err = json.Unmarshal(w.Body.Bytes(), &unMarschalled)
-//if err != nil {
-//t.Fatal("/state/"+dateStr+" not a valid json response:", err)
-//}
-//}
+	req, _ := http.NewRequest("GET", "/state/"+dateStr, nil)
+	w := httptest.NewRecorder()
+	s.ServeHTTP(w, req)
+	var unMarschalled interface{}
+	err := json.Unmarshal(w.Body.Bytes(), &unMarschalled)
+	t.Logf("unmarshalled return value fo getstate: %+v", unMarschalled)
+	if err != nil {
+		t.Fatal("/state/"+dateStr+" not a valid json response:", err)
+	}
+
+	s.StateFunc = GetStateMockAlwaysError
+	w = httptest.NewRecorder()
+	s.ServeHTTP(w, req)
+	err = json.Unmarshal(w.Body.Bytes(), &unMarschalled)
+	if err == nil {
+		t.Fatal("expected error when getstate fails")
+	}
+
+}
 
 //func TestOverview(t *testing.T) {
 //initServer(t)

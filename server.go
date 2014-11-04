@@ -23,11 +23,14 @@ type Config struct {
 	Log string
 }
 
+type StateGetter func(dbmap *gorp.DbMap, dateStr string) (err error, state State)
+
 type Server struct {
 	mux.Router
 	Dbmap     *gorp.DbMap
 	templates *template.Template
 	config    Config
+	StateFunc StateGetter
 }
 
 func NewServer(dbName string, config Config) (s *Server, err error) {
@@ -58,7 +61,7 @@ func NewServer(dbName string, config Config) (s *Server, err error) {
 	} else {
 		templates = template.Must(template.ParseFiles("index.html"))
 	}
-	s = &Server{Dbmap: Dbmap, templates: templates, config: config}
+	s = &Server{Dbmap: Dbmap, templates: templates, config: config, StateFunc: GetState}
 
 	// static files get served directly
 	if config.Env == "testing" {
@@ -141,13 +144,12 @@ func (s *Server) saveHandler(w http.ResponseWriter, r *http.Request) {
 func (s *Server) stateHandler(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	date, err := time.Parse("02012006", vars["date"])
-	log.Println(date)
 	if err != nil {
 		http.Error(w, InvalidId.String(), InvalidId.Code)
 		return
 	}
 	dateStr := fmt.Sprintf("%d-%d-%d", date.Month(), date.Day(), date.Year())
-	err, state := GetState(s.Dbmap, dateStr)
+	err, state := s.StateFunc(s.Dbmap, dateStr)
 	if err != nil {
 		response := err.(Response)
 		http.Error(w, response.Error(), response.Code)
