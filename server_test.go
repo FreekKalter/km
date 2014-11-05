@@ -90,69 +90,26 @@ func NewTestCombo(url string, resp Response) *TestCombo {
 	return &TestCombo{req, resp}
 }
 
-//func TestDelete(t *testing.T) {
-//initServer(t)
-//clearTable(t, "kilometers")
-
-//// add a row, save id
-//dayWithoutPadding := "112014" // 1 januray 2014 (without padding day and month)
-//goodDate := time.Date(2014, time.January, 1, 0, 0, 0, 0, time.UTC)
-//now := time.Now()
-//k := Kilometers{Date: now, Begin: 1234}
-//err := db.Insert(&k)
-//if err != nil {
-//t.Fatal("TestDelete: dberror on insert", err)
-//}
-//id := strconv.FormatInt(k.Id, 10)
-
-//var table []*TestCombo = []*TestCombo{
-//NewTestCombo("/delete/1", InvalidId),
-//NewTestCombo("/delete/a", InvalidId),
-//NewTestCombo("/delete/-1", InvalidId),
-//// delete saved row, compare returned id
-//NewTestCombo("/delete/"+id, InvalidId),
-//NewTestCombo("/delete/"+dayWithoutPadding, InvalidId),
-//NewTestCombo("/delete/"+dateFormat(goodDate), Response{Code: 200}),
-//}
-//tableDrivenTest(t, table)
-//}
+func NewTestComboPost(url string, resp Response) *TestCombo {
+	req, err := http.NewRequest("POST", url, nil)
+	if err != nil {
+		panic(err)
+	}
+	return &TestCombo{req, resp}
+}
 
 func dateFormat(t time.Time) string {
 	return fmt.Sprintf("%02d%02d%d", t.Day(), t.Month(), t.Year())
 }
 
-//func TestSaveReturnCodes(t *testing.T) {
-//initServer(t)
-//clearTable(t, "kilometers")
-
-//goodDate := time.Date(2014, time.January, 1, 0, 0, 0, 0, time.UTC)
-//todayStr := dateFormat(goodDate)
-//var table []*TestCombo = []*TestCombo{
-//NewTestCombo("/save", NotFound),
-//NewTestCombo("/save/a", NotFound),         // only respond to post not get
-//NewTestCombo("/save/"+todayStr, NotFound), // only respond to post not get
-//}
-//req, _ := http.NewRequest("POST", "/save/kilometers/today", strings.NewReader(`{"Name": "Begin", "Value": 1234}`))
-//table = append(table, &TestCombo{req, Response{Code: 404}})
-
-//req, _ = http.NewRequest("POST", "/save/"+todayStr, strings.NewReader(`{"Name": "Begin", "Km": "abc"}`))
-//table = append(table, &TestCombo{req, NotParsable})
-
-//req, _ = http.NewRequest("POST", "/save/"+todayStr, strings.NewReader(`{"Name": "InvalidFieldname", "Km": 1234}`))
-//table = append(table, &TestCombo{req, NotParsable})
-
-//req, _ = http.NewRequest("POST", "/save/"+todayStr, strings.NewReader(""))
-//table = append(table, &TestCombo{req, NotParsable})
-
-//req, _ = http.NewRequest("POST", "/save/blaat", strings.NewReader(`{"Name": "Begin", "Km": 1234}`))
-//table = append(table, &TestCombo{req, InvalidId})
-
-//tableDrivenTest(t, table)
-//}
-
 func TestHome(t *testing.T) {
 	initServer(t)
 	var table []*TestCombo = []*TestCombo{
+		NewTestCombo("/", Response{Code: 200}),
+	}
+	tableDrivenTest(t, table)
+	s.config.Env = "testing"
+	table = []*TestCombo{
 		NewTestCombo("/", Response{Code: 200}),
 	}
 	tableDrivenTest(t, table)
@@ -238,8 +195,8 @@ func TestStateHandler(t *testing.T) {
 	dateStr := dateFormat(goodDate)
 	var table []*TestCombo = []*TestCombo{
 		NewTestCombo("/state", NotFound),
-		NewTestCombo("/state/2234a", InvalidId),
-		NewTestCombo("/state/today", InvalidId),
+		NewTestCombo("/state/2234a", InvalidDate),
+		NewTestCombo("/state/today", InvalidDate),
 		//NewTestCombo("/state/"+dateStr, Response{Code: 200}),
 	}
 	tableDrivenTest(t, table)
@@ -356,4 +313,41 @@ func TestDeleteAllFail(t *testing.T) {
 	if err = dbmap.Db.Close(); err != nil {
 		t.Errorf("Error '%s' was not expected while closing the database", err)
 	}
+}
+func SaveMockReturnError(dbmap *gorp.DbMap, date time.Time, fields []Field) (err error) {
+	return CustomResponse(DbError, fmt.Errorf("blaat"))
+}
+
+func TestSaveParseErrors(t *testing.T) {
+	var table []*TestCombo = []*TestCombo{
+		NewTestComboPost("/save/1", InvalidDate),
+		NewTestComboPost("/save/a", InvalidDate),
+		NewTestComboPost("/save/-1", InvalidDate),
+	}
+	// this fails because an arry is expected
+	req, _ := http.NewRequest("POST", "/save/01012014", strings.NewReader(`{"Name": "Begin", "Km": 1234}`))
+	table = append(table, &TestCombo{req, Response{Code: NotParsable.Code}})
+
+	//test failure of SaveKilos
+	s.SaveKilos = SaveMockReturnError
+	s.SaveTimes = func(dbmap *gorp.DbMap, date time.Time, fields []Field) (err error) { return nil }
+	req, _ = http.NewRequest("POST", "/save/01012014", strings.NewReader(`[{"Name": "Begin", "Km": 1234}]`))
+	table = append(table, &TestCombo{req, Response{Code: DbError.Code}})
+	tableDrivenTest(t, table)
+
+	//test failure of SaveTimes
+	table = []*TestCombo{}
+	s.SaveTimes = SaveMockReturnError
+	s.SaveKilos = func(dbmap *gorp.DbMap, date time.Time, fields []Field) (err error) { return nil }
+	req, _ = http.NewRequest("POST", "/save/01012014", strings.NewReader(`[{"Name": "Begin", "Km": 1234}]`))
+	table = append(table, &TestCombo{req, Response{Code: DbError.Code}})
+	tableDrivenTest(t, table)
+
+	// test all correct data
+	table = []*TestCombo{}
+	s.SaveKilos = func(dbmap *gorp.DbMap, date time.Time, fields []Field) (err error) { return nil }
+	s.SaveTimes = func(dbmap *gorp.DbMap, date time.Time, fields []Field) (err error) { return nil }
+	req, _ = http.NewRequest("POST", "/save/01012014", strings.NewReader(`[{"Name": "Begin", "Km": 1234}]`))
+	table = append(table, &TestCombo{req, Response{Code: 200}})
+	tableDrivenTest(t, table)
 }

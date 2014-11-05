@@ -24,6 +24,7 @@ type Config struct {
 }
 
 type StateGetter func(dbmap *gorp.DbMap, dateStr string) (err error, state State)
+type SaveInterface func(dbmap *gorp.DbMap, date time.Time, fields []Field) (err error)
 
 type Server struct {
 	mux.Router
@@ -31,6 +32,8 @@ type Server struct {
 	templates *template.Template
 	config    Config
 	StateFunc StateGetter
+	SaveKilos SaveInterface
+	SaveTimes SaveInterface
 }
 
 func NewServer(dbName string, config Config) (s *Server, err error) {
@@ -61,7 +64,13 @@ func NewServer(dbName string, config Config) (s *Server, err error) {
 	} else {
 		templates = template.Must(template.ParseFiles("index.html"))
 	}
-	s = &Server{Dbmap: Dbmap, templates: templates, config: config, StateFunc: GetState}
+	s = &Server{Dbmap: Dbmap,
+		templates: templates,
+		config:    config,
+		StateFunc: GetState,
+		SaveKilos: SaveKilometers,
+		SaveTimes: SaveTimes,
+	}
 
 	// static files get served directly
 	if config.Env == "testing" {
@@ -75,11 +84,8 @@ func NewServer(dbName string, config Config) (s *Server, err error) {
 	s.HandleFunc("/", s.homeHandler).Methods("GET")
 	s.HandleFunc("/state/{date}", s.stateHandler).Methods("GET")
 	s.HandleFunc("/save/{date}", s.saveHandler).Methods("POST")
-	//s.HandleFunc("/save/kilometers/{id}", s.saveKilometersHandler).Methods("POST")
-	//s.HandleFunc("/save/times/{id}", s.saveTimesHandler).Methods("POST")
 	s.HandleFunc("/overview/{category}/{year}/{month}", s.overviewHandler).Methods("GET")
 	s.HandleFunc("/delete/{date}", s.deleteHandler).Methods("GET")
-	//s.HandleFunc("/csv/{year}/{month}", s.csvHandler).Methods("GET")
 	return s, nil
 }
 
@@ -101,13 +107,12 @@ type State struct {
 func (s *Server) saveHandler(w http.ResponseWriter, r *http.Request) {
 	// parse date
 	vars := mux.Vars(r)
-	date, err := time.Parse("02012006", vars["date"])
+	err, date := ParseUrlDate(vars["date"])
 	if err != nil {
-		http.Error(w, InvalidId.String(), InvalidId.Code)
+		myError := err.(Response)
+		http.Error(w, myError.String(), myError.Code)
 		return
 	}
-	dateStr := fmt.Sprintf("%d-%d-%d", date.Month(), date.Day(), date.Year())
-	log.Println(dateStr)
 
 	// parse posted data
 	body, err := ioutil.ReadAll(r.Body)
@@ -123,29 +128,31 @@ func (s *Server) saveHandler(w http.ResponseWriter, r *http.Request) {
 		log.Println(err)
 		return
 	}
-	log.Printf("parsed array of fields to save: %+v\n", fields)
-	//TODO: sanitize input
 
 	/// Save kilometers
-	err = SaveKilometers(s.Dbmap, date, fields)
+	err = s.SaveKilos(s.Dbmap, date, fields)
 	if err != nil {
 		response := err.(Response)
 		http.Error(w, response.Error(), response.Code)
+		return
 	}
 	// save Times
-	err = SaveTimes(s.Dbmap, date, fields)
+	err = s.SaveTimes(s.Dbmap, date, fields)
 	if err != nil {
 		response := err.(Response)
 		http.Error(w, response.Error(), response.Code)
+		return
 	}
+	w.Write([]byte("ok\n"))
 	// sla eerste stand van vandaag op als laatste stand van gister (als die vergeten is)
 }
 
 func (s *Server) stateHandler(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
-	date, err := time.Parse("02012006", vars["date"])
+	err, date := ParseUrlDate(vars["date"])
 	if err != nil {
-		http.Error(w, InvalidId.String(), InvalidId.Code)
+		myError := err.(Response)
+		http.Error(w, myError.String(), myError.Code)
 		return
 	}
 	dateStr := fmt.Sprintf("%d-%d-%d", date.Month(), date.Day(), date.Year())
@@ -267,12 +274,13 @@ func (s *Server) overviewHandler(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) deleteHandler(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
-	date, err := time.Parse("02012006", vars["date"])
-	log.Println(date)
+	err, date := ParseUrlDate(vars["date"])
 	if err != nil {
-		http.Error(w, InvalidId.String(), InvalidId.Code)
+		myError := err.(Response)
+		http.Error(w, myError.String(), myError.Code)
 		return
 	}
+
 	dateStr := fmt.Sprintf("%d-%d-%d", date.Month(), date.Day(), date.Year())
 	err = DeleteAllForDate(s.Dbmap, dateStr)
 	if err != nil {
