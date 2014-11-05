@@ -97,10 +97,7 @@ func GetAllTimes(dbmap *gorp.DbMap, year, month int64) (rows []TimeRow, err erro
 	if err != nil {
 		return rows, err
 	}
-	loc, err := time.LoadLocation("Europe/Amsterdam") // should not be hardcoded but idgaf
-	if err != nil {
-		log.Println(err)
-	}
+	loc, _ := time.LoadLocation("Europe/Amsterdam") // should not be hardcoded but idgaf
 	for _, c := range all {
 		row := NewTimeRow()
 		row.Id = c.Id

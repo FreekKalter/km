@@ -25,7 +25,7 @@ func TestUpdate(t *testing.T) {
 	ti := Times{}
 	err := ti.UpdateObject(dateStr, fields)
 	if err != nil {
-		t.Fatal(err)
+		t.Error(err)
 	}
 
 	if ti.Begin != cmpDate {
@@ -40,6 +40,19 @@ func TestUpdate(t *testing.T) {
 	fields = []Field{Field{Km: 123456, Time: "jemoeder", Name: "Begin"}}
 	if ti.UpdateObject(dateStr, fields) == nil {
 		t.Fatal("updateObjects should fail on invalid time field")
+	}
+
+	fields = []Field{Field{Km: 123456, Time: "13:00", Name: "Begin"},
+		Field{Km: 123456, Time: "13:00", Name: "Eerste"},
+		Field{Km: 123456, Time: "13:00", Name: "Laatste"},
+		Field{Km: 123456, Time: "13:00", Name: "Terug"},
+	}
+	ti = Times{}
+	if ti.UpdateObject(dateStr, fields) != nil {
+		t.Error("Error updating times struct ", err)
+	}
+	if ti.Begin != cmpDate || ti.CheckIn != cmpDate || ti.CheckOut != cmpDate || ti.Laatste != cmpDate {
+		t.Errorf("all fields should be %d but times struct is %+v", cmpDate, ti)
 	}
 }
 
@@ -155,7 +168,7 @@ func TestGetAllTimes(t *testing.T) {
 	date1 := time.Date(2014, time.January, 1, 0, 0, 0, 0, time.UTC)
 	sqlmock.ExpectQuery("select \\* from times where (.+)").
 		WithArgs(year, month).
-		WillReturnRows(sqlmock.NewRows(columns).AddRow(1, date1, 1388577600, 0, 0, 0))
+		WillReturnRows(sqlmock.NewRows(columns).AddRow(1, date1, 1388577600, 1388577600, 1388578800, 1388578860))
 	rows, err := GetAllTimes(dbmap, year, month)
 	if err != nil {
 		t.Errorf("GetAllTimes returned: %s", err)
@@ -163,11 +176,30 @@ func TestGetAllTimes(t *testing.T) {
 	if len(rows) != 1 {
 		t.Errorf("GetAlltimes returned unexpected number of rows")
 	}
-	rowExpected := TimeRow{Id: 1, Date: date1, Begin: "13:00", CheckIn: "-", CheckOut: "-", Laatste: "-"}
+	rowExpected := TimeRow{Id: 1, Date: date1, Begin: "13:00", CheckIn: "13:00", CheckOut: "13:20", Laatste: "13:21", Hours: 0.33333333333333337}
 	if rows[0] != rowExpected {
 		t.Errorf("row expected: %+v, got: %+v", rowExpected, rows[0])
 	}
 	if err = dbmap.Db.Close(); err != nil {
 		t.Errorf("Error '%s' was not expected while closing the database", err)
 	}
+
+	// test fail on select * from ...
+	err, dbmap, columns = MockSetup("times")
+	if err != nil {
+		t.Errorf("setting up mock db: %s", err)
+	}
+
+	sqlmock.ExpectQuery("select \\* from times where (.+)").
+		WithArgs(year, month).
+		WillReturnError(fmt.Errorf("FAIL"))
+
+	rows, err = GetAllTimes(dbmap, year, month)
+	if err == nil {
+		t.Error("GetAllTimes should return error when select * from times fails")
+	}
+	if err = dbmap.Db.Close(); err != nil {
+		t.Errorf("Error '%s' was not expected while closing the database", err)
+	}
+
 }
