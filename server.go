@@ -274,23 +274,21 @@ func (s *Server) deleteHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	dateStr := fmt.Sprintf("%d-%d-%d", date.Month(), date.Day(), date.Year())
-
-	_, err = s.Dbmap.Exec("delete from kilometers where date=$1", dateStr)
+	err = DeleteAllForDate(s.Dbmap, dateStr)
 	if err != nil {
-		http.Error(w, InvalidId.String(), InvalidId.Code)
-		return
+		myError := err.(Response)
+		http.Error(w, myError.String(), myError.Code)
 	}
-
-	_, err = s.Dbmap.Exec("delete from times where date=$1", dateStr)
-	if err != nil {
-		log.Println("error deleting from times", err)
-		http.Error(w, InvalidId.String(), InvalidId.Code)
-		return
-	}
-	log.Println("delete:", err)
 }
 
-func getDateStr() string {
-	now := time.Now().UTC()
-	return fmt.Sprintf("%d-%d-%d", now.Month(), now.Day(), now.Year())
+func DeleteAllForDate(dbmap *gorp.DbMap, dateStr string) (err error) {
+	_, err = dbmap.Exec("delete from kilometers where date=$1", dateStr)
+	if err != nil {
+		return CustomResponse(DbError, err)
+	}
+	_, err = dbmap.Exec("delete from times where date=$1", dateStr)
+	if err != nil {
+		return CustomResponse(DbError, err)
+	}
+	return nil
 }

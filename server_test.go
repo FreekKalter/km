@@ -302,3 +302,58 @@ func TestNewTimeRow(t *testing.T) {
 		t.Error("NewTimeRow should return a TimeRow struct with all fields initialized to '-'")
 	}
 }
+
+func TestDeleteAllSuccess(t *testing.T) {
+	err, dbmap, _ := MockSetup("kilometers")
+	if err != nil {
+		t.Error(err)
+	}
+	//timeColumns := []string{"Id", "Date", "Begin", "CheckIn", "CheckOut", "Laatste"}
+	sqlmock.ExpectExec("delete from kilometers where date=(.+)").
+		WithArgs("1-1-2014").
+		WillReturnResult(sqlmock.NewResult(1, 1))
+
+	sqlmock.ExpectExec("delete from times where date=(.+)").
+		WithArgs("1-1-2014").
+		WillReturnResult(sqlmock.NewResult(1, 1))
+
+	if err = DeleteAllForDate(dbmap, "1-1-2014"); err != nil {
+		t.Errorf("DeleteAllForDate returned error: %s", err)
+	}
+
+	if err = dbmap.Db.Close(); err != nil {
+		t.Errorf("Error '%s' was not expected while closing the database", err)
+	}
+}
+
+func TestDeleteAllFail(t *testing.T) {
+	// delete kilometers returns error
+	err, dbmap, _ := MockSetup("kilometers")
+	if err != nil {
+		t.Error(err)
+	}
+	sqlmock.ExpectExec("delete from kilometers where date=(.+)").
+		WithArgs("1-1-2014").
+		WillReturnError(fmt.Errorf("unkown id"))
+	if err = DeleteAllForDate(dbmap, "1-1-2014"); err == nil {
+		t.Errorf("DeleteAllForDate did not return error on db failure")
+	}
+	if err = dbmap.Db.Close(); err != nil {
+		t.Errorf("Error '%s' was not expected while closing the database", err)
+	}
+
+	// delete times returns error
+	err, dbmap, _ = MockSetup("times")
+	if err != nil {
+		t.Error(err)
+	}
+	sqlmock.ExpectExec("delete from times where date=(.+)").
+		WithArgs("1-1-2014").
+		WillReturnError(fmt.Errorf("unkown id"))
+	if err = DeleteAllForDate(dbmap, "1-1-2014"); err == nil {
+		t.Errorf("DeleteAllForDate did not return error on db failure")
+	}
+	if err = dbmap.Db.Close(); err != nil {
+		t.Errorf("Error '%s' was not expected while closing the database", err)
+	}
+}
