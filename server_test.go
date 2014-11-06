@@ -351,3 +351,38 @@ func TestSaveParseErrors(t *testing.T) {
 	table = append(table, &TestCombo{req, Response{Code: 200}})
 	tableDrivenTest(t, table)
 }
+
+func TestOverview(t *testing.T) {
+	initServer(t)
+	var table []*TestCombo = []*TestCombo{
+		NewTestCombo("/overview/abc/def", Response{Code: 404}),
+		NewTestCombo("/overview/kilometers/abc/def", InvalidUrl),
+		NewTestCombo("/overview/kilometers/2014/def", InvalidUrl),
+		NewTestCombo("/overview/invalidCategory/2014/1", InvalidUrl),
+	}
+	tableDrivenTest(t, table)
+
+	// select * returns error
+	err, dbmap, _ := MockSetup("kilometers")
+	if err != nil {
+		t.Error(err)
+	}
+	s.Dbmap = dbmap
+	sqlmock.ExpectExec("select * from kilometers where(.+)").
+		WithArgs(2014, 1).
+		WillReturnError(fmt.Errorf("unkown id"))
+
+	req, err := http.NewRequest("GET", "/overview/kilometers/2014/1", nil)
+	w := httptest.NewRecorder()
+	s.ServeHTTP(w, req)
+
+	if w.Code != DbError.Code {
+		t.Error("%s : code = %d, want %d", "/overview/kilometers/2014/1", w.Code, DbError.Code)
+	}
+	if err = DeleteAllForDate(dbmap, "1-1-2014"); err == nil {
+		t.Errorf("DeleteAllForDate did not return error on db failure")
+	}
+	if err = dbmap.Db.Close(); err != nil {
+		t.Errorf("Error '%s' was not expected while closing the database", err)
+	}
+}
