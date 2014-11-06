@@ -368,21 +368,61 @@ func TestOverview(t *testing.T) {
 		t.Error(err)
 	}
 	s.Dbmap = dbmap
-	sqlmock.ExpectExec("select * from kilometers where(.+)").
+	sqlmock.ExpectQuery("select \\* from kilometers where(.+)").
 		WithArgs(2014, 1).
 		WillReturnError(fmt.Errorf("unkown id"))
 
-	req, err := http.NewRequest("GET", "/overview/kilometers/2014/1", nil)
+	req, _ := http.NewRequest("GET", "/overview/kilometers/2014/1", nil)
 	w := httptest.NewRecorder()
 	s.ServeHTTP(w, req)
-
 	if w.Code != DbError.Code {
 		t.Error("%s : code = %d, want %d", "/overview/kilometers/2014/1", w.Code, DbError.Code)
 	}
-	if err = DeleteAllForDate(dbmap, "1-1-2014"); err == nil {
-		t.Errorf("DeleteAllForDate did not return error on db failure")
+	if err = dbmap.Db.Close(); err != nil {
+		t.Errorf("Error '%s' was not expected while closing the database", err)
+	}
+
+	// select * goes well
+	initServer(t)
+	err, dbmap, columns := MockSetup("kilometers")
+	if err != nil {
+		t.Error(err)
+	}
+	s.Dbmap = dbmap
+	date := time.Date(2014, time.January, 1, 0, 0, 0, 0, time.UTC)
+	sqlmock.ExpectQuery("select \\* from kilometers where (.+)").
+		WithArgs(2014, 1).
+		WillReturnRows(sqlmock.NewRows(columns).AddRow(1, date, 12345, 123456, 1234567, 12345678, ""))
+
+	req, _ = http.NewRequest("GET", "/overview/kilometers/2014/1", nil)
+	w = httptest.NewRecorder()
+	s.ServeHTTP(w, req)
+	if w.Code != 200 {
+		t.Errorf("%s : code = %d, want %d", "/overview/kilometers/2014/1", w.Code, 200)
 	}
 	if err = dbmap.Db.Close(); err != nil {
 		t.Errorf("Error '%s' was not expected while closing the database", err)
+	}
+
+	// test overview/tijden
+	initServer(t)
+	s.GetTimes = func(dbmap *gorp.DbMap, year, month int64) (rows []TimeRow, err error) {
+		return []TimeRow{}, DbError
+	}
+	req, err = http.NewRequest("GET", "/overview/tijden/2014/1", nil)
+	w = httptest.NewRecorder()
+	s.ServeHTTP(w, req)
+	if w.Code != DbError.Code {
+		t.Error("%s : code = %d, want %d", "/overview/kilometers/2014/1", w.Code, DbError.Code)
+	}
+
+	s.GetTimes = func(dbmap *gorp.DbMap, year, month int64) (rows []TimeRow, err error) {
+		return []TimeRow{}, nil
+	}
+	req, err = http.NewRequest("GET", "/overview/tijden/2014/1", nil)
+	w = httptest.NewRecorder()
+	s.ServeHTTP(w, req)
+	if w.Code != 200 {
+		t.Error("%s : code = %d, want %d", "/overview/kilometers/2014/1", w.Code, 200)
 	}
 }

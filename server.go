@@ -25,6 +25,7 @@ type Config struct {
 
 type StateGetter func(dbmap *gorp.DbMap, dateStr string) (err error, state State)
 type SaveInterface func(dbmap *gorp.DbMap, date time.Time, fields []Field) (err error)
+type GetTimesInterface func(dbmap *gorp.DbMap, year, month int64) (rows []TimeRow, err error)
 
 type Server struct {
 	mux.Router
@@ -34,6 +35,7 @@ type Server struct {
 	StateFunc StateGetter
 	SaveKilos SaveInterface
 	SaveTimes SaveInterface
+	GetTimes  GetTimesInterface
 }
 
 func NewServer(dbName string, config Config) (s *Server, err error) {
@@ -70,6 +72,7 @@ func NewServer(dbName string, config Config) (s *Server, err error) {
 		StateFunc: GetState,
 		SaveKilos: SaveKilometers,
 		SaveTimes: SaveTimes,
+		GetTimes:  GetAllTimes,
 	}
 
 	// static files get served directly
@@ -254,16 +257,17 @@ func (s *Server) overviewHandler(w http.ResponseWriter, r *http.Request) {
 		all := make([]Kilometers, 0)
 		_, err := s.Dbmap.Select(&all, "select * from kilometers where extract (year from date)=$1 and extract (month from date)=$2 order by date desc ", year, month)
 		if err != nil {
-			http.Error(w, DbError.String(), DbError.Code)
+			http.Error(w, fmt.Sprintf("%s\n%s", DbError.String(), err), DbError.Code)
 			log.Println("overview:", err)
 			return
 		}
 		jsonEncoder.Encode(all)
 	case "tijden":
-		rows, err := GetAllTimes(s.Dbmap, year, month)
+		rows, err := s.GetTimes(s.Dbmap, year, month)
 		if err != nil {
 			http.Error(w, DbError.String(), DbError.Code)
 			log.Println("overview tijden getalltimes return:", err)
+			return
 		}
 		jsonEncoder.Encode(rows)
 	default:
