@@ -287,7 +287,7 @@ func TestDeleteAllSuccess(t *testing.T) {
 	}
 }
 
-func TestDeleteAllFail(t *testing.T) {
+func TestDeleteAllKilometersFail(t *testing.T) {
 	// delete kilometers returns error
 	err, dbmap, _ := MockSetup("kilometers")
 	if err != nil {
@@ -303,11 +303,17 @@ func TestDeleteAllFail(t *testing.T) {
 		t.Errorf("Error '%s' was not expected while closing the database", err)
 	}
 
+}
+
+func TestDeleteAllTimesFail(t *testing.T) {
 	// delete times returns error
-	err, dbmap, _ = MockSetup("times")
+	err, dbmap, _ := MockSetup("times")
 	if err != nil {
 		t.Error(err)
 	}
+	sqlmock.ExpectExec("delete from kilometers where date=(.+)").
+		WithArgs("1-1-2014").
+		WillReturnResult(sqlmock.NewResult(1, 1))
 	sqlmock.ExpectExec("delete from times where date=(.+)").
 		WithArgs("1-1-2014").
 		WillReturnError(fmt.Errorf("unkown id"))
@@ -318,6 +324,7 @@ func TestDeleteAllFail(t *testing.T) {
 		t.Errorf("Error '%s' was not expected while closing the database", err)
 	}
 }
+
 func SaveMockReturnError(dbmap *gorp.DbMap, date time.Time, fields []Field) (err error) {
 	return CustomResponse(DbError, fmt.Errorf("blaat"))
 }
@@ -354,6 +361,19 @@ func TestSaveParseErrors(t *testing.T) {
 	req, _ = http.NewRequest("POST", "/save/01012014", strings.NewReader(`[{"Name": "Begin", "Km": 1234}]`))
 	table = append(table, &TestCombo{req, Response{Code: 200}})
 	tableDrivenTest(t, table)
+}
+
+type ErrorReader struct{}
+
+func (e ErrorReader) Read(p []byte) (n int, err error) {
+	return 0, fmt.Errorf("error, duh!")
+}
+
+func TestParseSaveBody(t *testing.T) {
+	err, _ := ParseJsonBody(ErrorReader{})
+	if err == nil {
+		t.Error("parsing is expected to fail")
+	}
 }
 
 func TestOverview(t *testing.T) {

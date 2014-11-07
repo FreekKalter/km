@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -109,6 +110,18 @@ type State struct {
 	LastDayKm    int
 }
 
+func ParseJsonBody(bodyReader io.Reader) (err error, fields []Field) {
+	body, err := ioutil.ReadAll(bodyReader)
+	if err != nil {
+		return CustomResponse(NotParsable, err), []Field{}
+	}
+	err = json.Unmarshal(body, &fields)
+	if err != nil {
+		return CustomResponse(NotParsable, err), []Field{}
+	}
+	return
+}
+
 func (s *Server) saveHandler(w http.ResponseWriter, r *http.Request) {
 	// parse date
 	vars := mux.Vars(r)
@@ -120,17 +133,10 @@ func (s *Server) saveHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// parse posted data
-	body, err := ioutil.ReadAll(r.Body)
+	err, fields := ParseJsonBody(r.Body)
 	if err != nil {
-		http.Error(w, NotParsable.String(), NotParsable.Code)
-		log.Println(err)
-		return
-	}
-	var fields []Field
-	err = json.Unmarshal(body, &fields)
-	if err != nil {
-		http.Error(w, NotParsable.String(), NotParsable.Code)
-		log.Println(err)
+		response := err.(Response)
+		http.Error(w, response.Error(), response.Code)
 		return
 	}
 
