@@ -450,3 +450,13 @@ func TestOverview(t *testing.T) {
 		t.Error("%s : code = %d, want %d", "/overview/kilometers/2014/1", w.Code, 200)
 	}
 }
+
+func TestDeleteHandler(t *testing.T) {
+	initServer(t)
+	req, _ := http.NewRequest("GET", "/delete/2014", nil)
+	w := httptest.NewRecorder()
+	s.ServeHTTP(w, req)
+	if w.Code != InvalidUrl.Code {
+		t.Error("%s : code = %d, want %d", "/delete/2014", w.Code, InvalidUrl.Code)
+	}
+}

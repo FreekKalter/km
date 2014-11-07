@@ -292,9 +292,7 @@ func (s *Server) deleteHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, myError.String(), myError.Code)
 		return
 	}
-
-	dateStr := fmt.Sprintf("%d-%d-%d", date.Month(), date.Day(), date.Year())
-	err = DeleteAllForDate(s.Dbmap, dateStr)
+	err = DeleteAllForDate(s.Dbmap, fmt.Sprintf("%d-%d-%d", date.Month(), date.Day(), date.Year()))
 	if err != nil {
 		myError := err.(Response)
 		http.Error(w, myError.String(), myError.Code)
