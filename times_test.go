@@ -15,7 +15,7 @@ func TestInit(t *testing.T) {
 	}
 }
 
-func TestUpdate(t *testing.T) {
+func TestStructUpdate(t *testing.T) {
 	testDate := time.Date(2009, time.November, 10, 0, 0, 0, 0, time.UTC)
 
 	fields := []Field{Field{Km: 123456, Time: "13:00", Name: "Begin"}, Field{}}

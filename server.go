@@ -8,6 +8,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"regexp"
 	"strconv"
 	"syscall"
 	"text/template"
@@ -50,10 +51,11 @@ func NewServer(dbName string, config Config) (s *Server, err error) {
 		log.SetPrefix("km-app:\t")
 	}
 
-	db, err := sql.Open("postgres", "user=docker dbname="+dbName+" password=docker sslmode=disable")
-	if err != nil {
-		fmt.Println("init:", err)
-		return nil, fmt.Errorf("could not connect to db: %s", err)
+	db, creating_db_error := sql.Open("postgres", "user=docker dbname="+dbName+" password=docker sslmode=disable")
+	testDbRegex := regexp.MustCompile("_test$")
+	err = db.Ping()
+	if !testDbRegex.MatchString(dbName) && err != nil {
+		return nil, fmt.Errorf("ping result: %s\nsql.Open result: %s", err, creating_db_error)
 	}
 	var Dbmap *gorp.DbMap
 	Dbmap = &gorp.DbMap{Db: db, Dialect: gorp.PostgresDialect{}}

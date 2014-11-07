@@ -26,24 +26,28 @@ func initServer(t *testing.T) {
 	config = Config{Env: "production", Log: "./test.log"}
 	s, err = NewServer("km_test", config)
 	if err != nil {
-		t.Fatal(err.Error())
+		t.Error(err)
 	}
 	db = s.Dbmap
 }
 
 func TestServerInitErrors(t *testing.T) {
 	_, err := NewServer("test", Config{Log: "/test.log"})
-	t.Log(err)
 	if err == nil {
 		t.Error("NewServer should throw error on unwritable logfile input")
 	}
 
-	ss, err := NewServer("test", Config{Env: "testing", Log: "./test.log"})
+	ss, err := NewServer("km_test", Config{Env: "testing", Log: "./test.log"})
 	if err != nil {
-		t.Error("newserver with 'testing' environment fails to init: %s", err.Error())
+		t.Errorf("newserver with 'testing' environment fails to init: %s", err.Error())
 	}
 	if ss == nil {
-		t.Error("server struct returned is nil")
+		t.Errorf("server struct returned is nil")
+	}
+
+	ss, err = NewServer("something_not_ending_test_", Config{Env: "testing", Log: "./test.log"})
+	if err == nil {
+		t.Errorf("a server with a name not ending in test should fail on init when no postgres server running to connect to")
 	}
 
 }
