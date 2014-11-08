@@ -38,12 +38,7 @@ func main() {
 	log.Printf("started... (%s)\n", config.Env)
 
 	listener, _ := net.Listen("tcp", ":4001")
-	if config.Env == "testing" {
-		http.Serve(listener, nil)
-	} else {
-		http.Serve(listener, nil)
-		//fcgi.Serve(listener, nil)
-	}
+	http.Serve(listener, nil)
 }
 
 //TODO:test this function
