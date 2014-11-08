@@ -1,0 +1,25 @@
+
+km-app:	2014/11/08 18:08:06 started... (production)
+km-app:	2014/11/08 18:33:14 started... (testing)
+DB:	2014/11/08 18:33:25 [gorp] select * from kilometers where date=$1 [1:"11-8-2014"]
+DB:	2014/11/08 18:33:25 [gorp] select * from kilometers where date = (select max(date) as date from kilometers) []
+km-app:	2014/11/08 18:33:25 nothing in db yet for todag: 11-8-2014
+DB:	2014/11/08 18:33:25 [gorp] select * from times where date=(select max(date) as date from times) []
+km-app:	2014/11/08 18:33:25 na select laatste tijden: <nil> {303 2014-11-05 00:00:00 +0000 +0000 1415203260 1415203260 1415203260 1415205600}
+DB:	2014/11/08 18:33:25 [gorp] select * from kilometers where date=$1 [1:"11-8-2014"]
+DB:	2014/11/08 18:33:25 [gorp] select * from kilometers where date = (select max(date) as date from kilometers) []
+km-app:	2014/11/08 18:33:25 nothing in db yet for todag: 11-8-2014
+DB:	2014/11/08 18:33:25 [gorp] select * from times where date=(select max(date) as date from times) []
+km-app:	2014/11/08 18:33:25 na select laatste tijden: <nil> {303 2014-11-05 00:00:00 +0000 +0000 1415203260 1415203260 1415203260 1415205600}
+km-app:	2014/11/08 18:33:28 overview 2014 11
+DB:	2014/11/08 18:33:28 [gorp] select * from kilometers where extract (year from date)=$1 and extract (month from date)=$2 order by date desc  [1:2014 2:11]
+DB:	2014/11/08 18:33:29 [gorp] select * from kilometers where date=$1 [1:"11-8-2014"]
+DB:	2014/11/08 18:33:29 [gorp] select * from kilometers where date = (select max(date) as date from kilometers) []
+km-app:	2014/11/08 18:33:29 nothing in db yet for todag: 11-8-2014
+DB:	2014/11/08 18:33:29 [gorp] select * from times where date=(select max(date) as date from times) []
+km-app:	2014/11/08 18:33:29 na select laatste tijden: <nil> {303 2014-11-05 00:00:00 +0000 +0000 1415203260 1415203260 1415203260 1415205600}
+DB:	2014/11/08 18:33:29 [gorp] select * from kilometers where date=$1 [1:"11-8-2014"]
+DB:	2014/11/08 18:33:29 [gorp] select * from kilometers where date = (select max(date) as date from kilometers) []
+km-app:	2014/11/08 18:33:29 nothing in db yet for todag: 11-8-2014
+DB:	2014/11/08 18:33:29 [gorp] select * from times where date=(select max(date) as date from times) []
+km-app:	2014/11/08 18:33:29 na select laatste tijden: <nil> {303 2014-11-05 00:00:00 +0000 +0000 1415203260 1415203260 1415203260 1415205600}

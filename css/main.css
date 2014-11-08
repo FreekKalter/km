@@ -1,0 +1,35 @@
+legend span {
+    font-style: italic;
+    display: block;
+}
+
+h1 a, a:hover {
+    color: #333333;
+    text-decoration: none;
+}
+
+.row.header {
+    margin-top: 5px;
+    margin-bottom: 5px;
+    margin-left: 0px;
+}
+
+.header .col-sm-10{
+    padding:0px;
+}
+.css-form input.ng-invalid.ng-dirty {
+    border-color: #FA787E;
+}
+
+form{
+    padding: 8px;
+}
+
+td.buttons {
+    width: 10%;
+}
+
+a.btn {
+    margin-bottom : 10px;
+}
+
