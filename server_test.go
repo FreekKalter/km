@@ -400,7 +400,7 @@ func TestOverview(t *testing.T) {
 	w := httptest.NewRecorder()
 	s.ServeHTTP(w, req)
 	if w.Code != DbError.Code {
-		t.Error("%s : code = %d, want %d", "/overview/kilometers/2014/1", w.Code, DbError.Code)
+		t.Errorf("%s : code = %d, want %d", "/overview/kilometers/2014/1", w.Code, DbError.Code)
 	}
 	if err = dbmap.Db.Close(); err != nil {
 		t.Errorf("Error '%s' was not expected while closing the database", err)
@@ -437,7 +437,7 @@ func TestOverview(t *testing.T) {
 	w = httptest.NewRecorder()
 	s.ServeHTTP(w, req)
 	if w.Code != DbError.Code {
-		t.Error("%s : code = %d, want %d", "/overview/kilometers/2014/1", w.Code, DbError.Code)
+		t.Errorf("%s : code = %d, want %d", "/overview/kilometers/2014/1", w.Code, DbError.Code)
 	}
 
 	s.GetTimes = func(dbmap *gorp.DbMap, year, month int64) (rows []TimeRow, err error) {
@@ -447,7 +447,7 @@ func TestOverview(t *testing.T) {
 	w = httptest.NewRecorder()
 	s.ServeHTTP(w, req)
 	if w.Code != 200 {
-		t.Error("%s : code = %d, want %d", "/overview/kilometers/2014/1", w.Code, 200)
+		t.Errorf("%s : code = %d, want %d", "/overview/kilometers/2014/1", w.Code, 200)
 	}
 }
 
@@ -457,6 +457,6 @@ func TestDeleteHandler(t *testing.T) {
 	w := httptest.NewRecorder()
 	s.ServeHTTP(w, req)
 	if w.Code != InvalidUrl.Code {
-		t.Error("%s : code = %d, want %d", "/delete/2014", w.Code, InvalidUrl.Code)
+		t.Errorf("%s : code = %d, want %d", "/delete/2014", w.Code, InvalidUrl.Code)
 	}
 }
