@@ -1,0 +1,2 @@
+env: testing
+log: ./log/km.log
