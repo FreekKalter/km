@@ -19,7 +19,3 @@ func TestParseConfig(t *testing.T) {
 		t.Error("invalid yaml should result in empty config struct")
 	}
 }
-
-func TestMain(t *testing.T) {
-	main()
-}

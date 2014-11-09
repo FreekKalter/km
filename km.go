@@ -13,9 +13,16 @@ import (
 	"launchpad.net/goyaml"
 )
 
+var (
+	workdir, configFile *string
+)
+
+func init() {
+	workdir = flag.String("workdir", fmt.Sprintf("%s/src/github.com/FreekKalter/km/", os.Getenv("GOPATH")), "directory where support files are located (js/img/index.html)")
+	configFile = flag.String("config", "./config.yml", "location of configuration file")
+}
+
 func main() {
-	workdir := flag.String("workdir", fmt.Sprintf("%s/src/github.com/FreekKalter/km/", os.Getenv("GOPATH")), "directory where support files are located (js/img/index.html)")
-	configFile := flag.String("config", "./config.yml", "location of configuration file")
 	flag.Parse()
 	err := os.Chdir(*workdir)
 	if err != nil {
