@@ -56,7 +56,13 @@ func NewServer(dbName string, config Config) (s *Server, err error) {
 	testDbRegex := regexp.MustCompile("_test$")
 	err = db.Ping()
 	if !testDbRegex.MatchString(dbName) && err != nil {
-		return nil, fmt.Errorf("ping result: %s\nsql.Open result: %s", err, creating_db_error)
+		if creating_db_error != nil {
+			return nil, fmt.Errorf("sql.Open result: %s", creating_db_error)
+		}
+		if err != nil {
+			return nil, fmt.Errorf("ping result: %s", err)
+
+		}
 	}
 	var Dbmap *gorp.DbMap
 	Dbmap = &gorp.DbMap{Db: db, Dialect: gorp.PostgresDialect{}}
