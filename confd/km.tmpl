@@ -1,0 +1,4 @@
+env: testing
+log: /km-log/km.log
+port: 4005
+{{ with index .services_postgres 0 }}db: "{{.Value}}" {{end}}

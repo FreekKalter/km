@@ -8,6 +8,7 @@ import (
 	"net"
 	"net/http"
 	"os"
+	"syscall"
 
 	"github.com/FreekKalter/km/lib"
 	"launchpad.net/goyaml"
@@ -32,19 +33,32 @@ func main() {
 	// Load config
 	config, err := parseConfig(*configFile)
 	if err != nil {
-		log.Fatal(err.Error())
+		log.Fatal(err)
+	}
+
+	var logFile *os.File
+	// Set up logging
+	if config.Log != "" {
+		logFile, err = os.OpenFile(config.Log, syscall.O_WRONLY|syscall.O_APPEND|syscall.O_CREAT, 0666)
+		if err != nil {
+			log.Fatal("could not open logfile: %s", err.Error())
+		}
+		log.SetOutput(logFile)
+		log.SetPrefix("km-app:\t")
 	}
 
 	s, err := km.NewServer("km", config)
 	if err != nil {
-		log.Fatal(err.Error())
+		log.Fatal(err)
 	}
 	defer s.Dbmap.Db.Close()
 
 	http.Handle("/", s)
-	log.Printf("started... (%s)\n", config.Env)
-
-	listener, _ := net.Listen("tcp", ":4001")
+	listener, err := net.Listen("tcp", fmt.Sprintf(":%d", config.Port))
+	if err != nil {
+		log.Fatal(err)
+	}
+	log.Printf("started on port %d... (%s)\n", config.Port, config.Env)
 	http.Serve(listener, nil)
 }
 

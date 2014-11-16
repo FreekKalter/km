@@ -11,6 +11,7 @@ import (
 	"os"
 	"regexp"
 	"strconv"
+	"strings"
 	"syscall"
 	"text/template"
 	"time"
@@ -21,8 +22,10 @@ import (
 )
 
 type Config struct {
-	Env string
-	Log string
+	Env  string
+	Log  string
+	Port int
+	Db   string
 }
 
 type StateGetter func(dbmap *gorp.DbMap, dateStr string) (err error, state State)
@@ -52,7 +55,8 @@ func NewServer(dbName string, config Config) (s *Server, err error) {
 		log.SetPrefix("km-app:\t")
 	}
 
-	db, creating_db_error := sql.Open("postgres", "user=docker dbname="+dbName+" password=docker sslmode=disable")
+	host_port := strings.Split(config.Db, ":")
+	db, creating_db_error := sql.Open("postgres", fmt.Sprintf("host=%s port=%s user=docker dbname=%s password=docker sslmode=disable", host_port[0], host_port[1], dbName))
 	testDbRegex := regexp.MustCompile("_test$")
 	err = db.Ping()
 	if !testDbRegex.MatchString(dbName) && err != nil {
@@ -169,6 +173,7 @@ func (s *Server) stateHandler(w http.ResponseWriter, r *http.Request) {
 	err, date := ParseUrlDate(vars["date"])
 	if err != nil {
 		myError := err.(Response)
+		log.Println(myError)
 		http.Error(w, myError.String(), myError.Code)
 		return
 	}
@@ -176,6 +181,7 @@ func (s *Server) stateHandler(w http.ResponseWriter, r *http.Request) {
 	err, state := s.StateFunc(s.Dbmap, dateStr)
 	if err != nil {
 		response := err.(Response)
+		log.Println(response.Extra)
 		http.Error(w, response.Error(), response.Code)
 	}
 	jsonEncoder := json.NewEncoder(w)
