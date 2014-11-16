@@ -9,10 +9,7 @@ matrix:
     allow_failures:
         - go: tip
 
-install:
-    - go get -t github.com/FreekKalter/km
-    - go get -t github.com/FreekKalter/km/lib
-    - go get -v code.google.com/p/go.tools/cmd/cover
+install: ./travis-install.sh
 script:
     - go get -v github.com/FreekKalter/km
     - go test -v -covermode=count -coverprofile=main.cov github.com/FreekKalter/km
