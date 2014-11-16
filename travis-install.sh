@@ -1,10 +1,12 @@
 #!/bin/bash
 
-go version | grep devel &>/dev/null
-if [ $? -eq 0 ]; then
-    go get -v golang.org/x/tools/cmd/cover
-else
-    go get -t github.com/FreekKalter/km
-    go get -t github.com/FreekKalter/km/lib
-    go get -v code.google.com/p/go.tools/cmd/cover
-fi
+go get -t github.com/FreekKalter/km
+go get -t github.com/FreekKalter/km/lib
+
+go get -v golang.org/x/tools/cmd/cover
+#go version | grep devel &>/dev/null
+#if [ $? -eq 0 ]; then
+    #go get -v golang.org/x/tools/cmd/cover
+#else
+    #go get -v code.google.com/p/go.tools/cmd/cover
+#fi
