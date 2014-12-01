@@ -52,7 +52,7 @@ func NewServer(dbName string, config Config) (s *Server, err error) {
 			return nil, fmt.Errorf("could not open logfile: %s", err.Error())
 		}
 		log.SetOutput(logFile)
-		log.SetPrefix("km-app:\t")
+		log.SetPrefix(fmt.Sprintf("km-app %s:\t", os.Getenv("OUTSIDEPORT")))
 	}
 
 	host_port := strings.Split(config.Db, ":")
