@@ -3,6 +3,7 @@ package km
 import (
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"reflect"
@@ -458,5 +459,14 @@ func TestDeleteHandler(t *testing.T) {
 	s.ServeHTTP(w, req)
 	if w.Code != InvalidUrl.Code {
 		t.Errorf("%s : code = %d, want %d", "/delete/2014", w.Code, InvalidUrl.Code)
+	}
+
+	req, _ = http.NewRequest("GET", "/delete/01012014", nil)
+	w = httptest.NewRecorder()
+	s.ServeHTTP(w, req)
+
+	if w.Code != DbError.Code {
+		body, _ := ioutil.ReadAll(w.Body)
+		t.Errorf("%s : code = %d, want %d", "/delete/01012014", string(body), w.Code, DbError.Code)
 	}
 }
