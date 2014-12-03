@@ -1,4 +1,7 @@
 #!/bin/bash
+# travis does a build for for multiple versions of go
+# at this time the build from tip uses a new location for
+# the cover tool, this script takes care of that
 
 go get -t github.com/FreekKalter/km
 go get -t github.com/FreekKalter/km/lib
