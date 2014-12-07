@@ -8,13 +8,14 @@ import (
 	"github.com/coopernurse/gorp"
 )
 
-/// Save times
+// Times represents a db row in the times table
 type Times struct {
 	Id                                int64
 	Date                              time.Time
 	Begin, CheckIn, CheckOut, Laatste int64
 }
 
+// TimeRow is a Times row converted to the format displayed in the frontend
 type TimeRow struct {
 	Id                                int64
 	Date                              time.Time
@@ -22,6 +23,7 @@ type TimeRow struct {
 	Hours                             float64
 }
 
+// NewTimeRow creates new initialized TimeRow
 func NewTimeRow() TimeRow {
 	var t TimeRow
 	t.Begin = "-"
@@ -31,6 +33,8 @@ func NewTimeRow() TimeRow {
 	return t
 }
 
+// UpdateObject updates the times struct with posted data coming from the user
+// this struct can used to update the current state in the db
 func (t *Times) UpdateObject(date string, fields []Field) error {
 	loc, _ := time.LoadLocation("Europe/Amsterdam") // should not be hardcoded but idgaf
 	for _, field := range fields {
@@ -56,6 +60,7 @@ func (t *Times) UpdateObject(date string, fields []Field) error {
 	return nil
 }
 
+// SaveTimes saves a given fields array to the db backend
 func SaveTimes(dbmap *gorp.DbMap, date time.Time, fields []Field) (err error) {
 	dateStr := fmt.Sprintf("%d-%d-%d", date.Month(), date.Day(), date.Year())
 	times := new(Times)
@@ -74,7 +79,7 @@ func SaveTimes(dbmap *gorp.DbMap, date time.Time, fields []Field) (err error) {
 			return CustomResponse(DbError, err)
 		}
 		if count != 1 {
-			return CustomResponse(DbError, fmt.Errorf("Update did not return a count of 1, instead: %d", count))
+			return CustomResponse(DbError, fmt.Errorf("update did not return a count of 1, instead: %d", count))
 		}
 	} else {
 		if err.Error() != "sql: no rows in result set" {
@@ -90,6 +95,8 @@ func SaveTimes(dbmap *gorp.DbMap, date time.Time, fields []Field) (err error) {
 	return nil
 }
 
+// GetAllTimes pulls all rows for a given month from the db and converts it all to TimeRow for
+// displaying in the frontend
 func GetAllTimes(dbmap *gorp.DbMap, year, month int64) (rows []TimeRow, err error) {
 	var all []Times
 	rows = make([]TimeRow, 0)
