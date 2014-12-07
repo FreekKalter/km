@@ -109,7 +109,7 @@ func dateFormat(t time.Time) string {
 
 func TestHome(t *testing.T) {
 	initServer(t)
-	var table []*TestCombo = []*TestCombo{
+	var table = []*TestCombo{
 		NewTestCombo("/", Response{Code: 200}),
 	}
 	tableDrivenTest(t, table)
@@ -182,9 +182,8 @@ func TestGetStateSuccessfulWithNoDataForToday(t *testing.T) {
 func GetStateMock(dbmap *gorp.DbMap, dateStr string) (err error, state State) {
 	if dateStr == "1-1-2014" {
 		return nil, State{}
-	} else {
-		return DbError, State{}
 	}
+	return DbError, State{}
 }
 
 func GetStateMockAlwaysError(dbmap *gorp.DbMap, dateStr string) (err error, state State) {
@@ -198,7 +197,7 @@ func TestStateHandler(t *testing.T) {
 	s.StateFunc = GetStateMock
 	goodDate := time.Date(2014, time.January, 1, 0, 0, 0, 0, time.UTC)
 	dateStr := dateFormat(goodDate)
-	var table []*TestCombo = []*TestCombo{
+	var table = []*TestCombo{
 		NewTestCombo("/state", NotFound),
 		NewTestCombo("/state/2234a", InvalidDate),
 		NewTestCombo("/state/today", InvalidDate),
@@ -279,7 +278,7 @@ func TestDeleteAllSuccess(t *testing.T) {
 		WithArgs("1-1-2014").
 		WillReturnResult(sqlmock.NewResult(1, 1))
 
-	if err = DeleteAllForDate(dbmap, "1-1-2014"); err != nil {
+	if err = deleteAllForDate(dbmap, "1-1-2014"); err != nil {
 		t.Errorf("DeleteAllForDate returned error: %s", err)
 	}
 
@@ -297,7 +296,7 @@ func TestDeleteAllKilometersFail(t *testing.T) {
 	sqlmock.ExpectExec("delete from kilometers where date=(.+)").
 		WithArgs("1-1-2014").
 		WillReturnError(fmt.Errorf("unkown id"))
-	if err = DeleteAllForDate(dbmap, "1-1-2014"); err == nil {
+	if err = deleteAllForDate(dbmap, "1-1-2014"); err == nil {
 		t.Errorf("DeleteAllForDate did not return error on db failure")
 	}
 	if err = dbmap.Db.Close(); err != nil {
@@ -318,7 +317,7 @@ func TestDeleteAllTimesFail(t *testing.T) {
 	sqlmock.ExpectExec("delete from times where date=(.+)").
 		WithArgs("1-1-2014").
 		WillReturnError(fmt.Errorf("unkown id"))
-	if err = DeleteAllForDate(dbmap, "1-1-2014"); err == nil {
+	if err = deleteAllForDate(dbmap, "1-1-2014"); err == nil {
 		t.Errorf("DeleteAllForDate did not return error on db failure")
 	}
 	if err = dbmap.Db.Close(); err != nil {
@@ -331,7 +330,7 @@ func SaveMockReturnError(dbmap *gorp.DbMap, date time.Time, fields []Field) (err
 }
 
 func TestSaveParseErrors(t *testing.T) {
-	var table []*TestCombo = []*TestCombo{
+	var table = []*TestCombo{
 		NewTestComboPost("/save/1", InvalidDate),
 		NewTestComboPost("/save/a", InvalidDate),
 		NewTestComboPost("/save/-1", InvalidDate),
@@ -367,11 +366,11 @@ func TestSaveParseErrors(t *testing.T) {
 type ErrorReader struct{}
 
 func (e ErrorReader) Read(p []byte) (n int, err error) {
-	return 0, fmt.Errorf("error, duh!")
+	return 0, fmt.Errorf("error, duh")
 }
 
 func TestParseSaveBody(t *testing.T) {
-	err, _ := ParseJsonBody(ErrorReader{})
+	err, _ := ParseJSONBody(ErrorReader{})
 	if err == nil {
 		t.Error("parsing is expected to fail")
 	}
@@ -379,7 +378,7 @@ func TestParseSaveBody(t *testing.T) {
 
 func TestOverview(t *testing.T) {
 	initServer(t)
-	var table []*TestCombo = []*TestCombo{
+	var table = []*TestCombo{
 		NewTestCombo("/overview/abc/def", Response{Code: 404}),
 		NewTestCombo("/overview/kilometers/abc/def", InvalidUrl),
 		NewTestCombo("/overview/kilometers/2014/def", InvalidUrl),

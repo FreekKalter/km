@@ -18,9 +18,11 @@ import (
 
 	"github.com/coopernurse/gorp"
 	"github.com/gorilla/mux"
+	// postgres for its side effects
 	_ "github.com/lib/pq"
 )
 
+// Config is configuration for the app, parsed from config file
 type Config struct {
 	Env  string
 	Log  string
@@ -28,10 +30,18 @@ type Config struct {
 	Db   string
 }
 
+// StateGetter is the interface to swap out the GetState function when testing
 type StateGetter func(dbmap *gorp.DbMap, dateStr string) (err error, state State)
+
+// SaveInterface is the interface to swap out the Save function when testing
 type SaveInterface func(dbmap *gorp.DbMap, date time.Time, fields []Field) (err error)
+
+// GetTimesInterface is the interface to swap out the GetTimes function when testing
 type GetTimesInterface func(dbmap *gorp.DbMap, year, month int64) (rows []TimeRow, err error)
 
+// Server is the main type of this package
+// it holds all the data required to run the app, the database connection,
+// the webserver routes to handle, and the templates to parse
 type Server struct {
 	mux.Router
 	Dbmap     *gorp.DbMap
@@ -43,6 +53,7 @@ type Server struct {
 	GetTimes  GetTimesInterface
 }
 
+// NewServer creates a new server object with a given name and with a specific configuration
 func NewServer(dbName string, config Config) (s *Server, err error) {
 	var logFile *os.File
 	// Set up logging
@@ -55,13 +66,13 @@ func NewServer(dbName string, config Config) (s *Server, err error) {
 		log.SetPrefix(fmt.Sprintf("km-app %s:\t", os.Getenv("OUTSIDEPORT")))
 	}
 
-	host_port := strings.Split(config.Db, ":")
-	db, creating_db_error := sql.Open("postgres", fmt.Sprintf("host=%s port=%s user=docker dbname=%s password=docker sslmode=disable", host_port[0], host_port[1], dbName))
+	hostPort := strings.Split(config.Db, ":")
+	db, creatingDbError := sql.Open("postgres", fmt.Sprintf("host=%s port=%s user=docker dbname=%s password=docker sslmode=disable", hostPort[0], hostPort[1], dbName))
 	testDbRegex := regexp.MustCompile("_test$")
 	err = db.Ping()
 	if !testDbRegex.MatchString(dbName) && err != nil {
-		if creating_db_error != nil {
-			return nil, fmt.Errorf("sql.Open result: %s", creating_db_error)
+		if creatingDbError != nil {
+			return nil, fmt.Errorf("sql.Open result: %s", creatingDbError)
 		}
 		if err != nil {
 			return nil, fmt.Errorf("ping result: %s", err)
@@ -114,13 +125,15 @@ func (s *Server) homeHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// State represents the stucture of the data to fill the form
 type State struct {
 	Fields       []Field
 	LastDayError string
 	LastDayKm    int
 }
 
-func ParseJsonBody(bodyReader io.Reader) (err error, fields []Field) {
+// ParseJSONBody parse the posted data into a Field array
+func ParseJSONBody(bodyReader io.Reader) (err error, fields []Field) {
 	body, err := ioutil.ReadAll(bodyReader)
 	if err != nil {
 		return CustomResponse(NotParsable, err), []Field{}
@@ -143,7 +156,7 @@ func (s *Server) saveHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// parse posted data
-	err, fields := ParseJsonBody(r.Body)
+	err, fields := ParseJSONBody(r.Body)
 	if err != nil {
 		response := err.(Response)
 		http.Error(w, response.Error(), response.Code)
@@ -188,6 +201,7 @@ func (s *Server) stateHandler(w http.ResponseWriter, r *http.Request) {
 	jsonEncoder.Encode(state)
 }
 
+// GetState returns the data already saved in the databse to fill the form with
 func GetState(dbmap *gorp.DbMap, dateStr string) (err error, state State) {
 	state.Fields = make([]Field, 4)
 	// Get data save for this date
@@ -274,7 +288,7 @@ func (s *Server) overviewHandler(w http.ResponseWriter, r *http.Request) {
 	jsonEncoder := json.NewEncoder(w)
 	switch category {
 	case "kilometers":
-		all := make([]Kilometers, 0)
+		var all []Kilometers
 		_, err := s.Dbmap.Select(&all, "select * from kilometers where extract (year from date)=$1 and extract (month from date)=$2 order by date desc ", year, month)
 		if err != nil {
 			http.Error(w, fmt.Sprintf("%s\n%s", DbError.String(), err), DbError.Code)
@@ -296,6 +310,7 @@ func (s *Server) overviewHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// DeleteHandler delete all saved times and kilometers for a given date
 func (s *Server) deleteHandler(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	err, date := ParseUrlDate(vars["date"])
@@ -304,14 +319,14 @@ func (s *Server) deleteHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, myError.String(), myError.Code)
 		return
 	}
-	err = DeleteAllForDate(s.Dbmap, fmt.Sprintf("%d-%d-%d", date.Month(), date.Day(), date.Year()))
+	err = deleteAllForDate(s.Dbmap, fmt.Sprintf("%d-%d-%d", date.Month(), date.Day(), date.Year()))
 	if err != nil {
 		myError := err.(Response)
 		http.Error(w, myError.String(), myError.Code)
 	}
 }
 
-func DeleteAllForDate(dbmap *gorp.DbMap, dateStr string) (err error) {
+func deleteAllForDate(dbmap *gorp.DbMap, dateStr string) (err error) {
 	_, err = dbmap.Exec("delete from kilometers where date=$1", dateStr)
 	if err != nil {
 		return CustomResponse(DbError, err)
