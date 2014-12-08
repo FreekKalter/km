@@ -10,14 +10,14 @@ import (
 
 // Times represents a db row in the times table
 type Times struct {
-	Id                                int64
+	ID                                int64 `db:"Id"`
 	Date                              time.Time
 	Begin, CheckIn, CheckOut, Laatste int64
 }
 
 // TimeRow is a Times row converted to the format displayed in the frontend
 type TimeRow struct {
-	Id                                int64
+	ID                                int64
 	Date                              time.Time
 	Begin, CheckIn, CheckOut, Laatste string
 	Hours                             float64
@@ -88,7 +88,7 @@ func SaveTimes(dbmap *gorp.DbMap, date time.Time, fields []Field) (err error) {
 		times := new(Times)
 		times.Date = date
 		times.UpdateObject(dateStr, fields)
-		times.Id = -1
+		times.ID = -1
 		log.Printf("object to be insterted: %+v\n", times)
 		err = dbmap.Insert(times)
 	}
@@ -107,7 +107,7 @@ func GetAllTimes(dbmap *gorp.DbMap, year, month int64) (rows []TimeRow, err erro
 	loc, _ := time.LoadLocation("Europe/Amsterdam") // should not be hardcoded but idgaf
 	for _, c := range all {
 		row := NewTimeRow()
-		row.Id = c.Id
+		row.ID = c.ID
 		row.Date = c.Date
 		if c.Begin != 0 {
 			row.Begin = time.Unix(c.Begin, 0).In(loc).Format("15:04")

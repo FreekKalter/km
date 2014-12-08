@@ -10,7 +10,7 @@ import (
 
 func TestInit(t *testing.T) {
 	ti := Times{}
-	if ti.Id != 0 {
+	if ti.ID != 0 {
 		t.Fatal("id should be 0 on times init")
 	}
 }
@@ -176,7 +176,7 @@ func TestGetAllTimes(t *testing.T) {
 	if len(rows) != 1 {
 		t.Errorf("GetAlltimes returned unexpected number of rows")
 	}
-	rowExpected := TimeRow{Id: 1, Date: date1, Begin: "13:00", CheckIn: "13:00", CheckOut: "13:20", Laatste: "13:21", Hours: 0.33333333333333337}
+	rowExpected := TimeRow{ID: 1, Date: date1, Begin: "13:00", CheckIn: "13:00", CheckOut: "13:20", Laatste: "13:21", Hours: 0.33333333333333337}
 	if rows[0] != rowExpected {
 		t.Errorf("row expected: %+v, got: %+v", rowExpected, rows[0])
 	}

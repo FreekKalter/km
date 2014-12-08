@@ -148,7 +148,7 @@ func ParseJSONBody(bodyReader io.Reader) (err error, fields []Field) {
 func (s *Server) saveHandler(w http.ResponseWriter, r *http.Request) {
 	// parse date
 	vars := mux.Vars(r)
-	err, date := ParseUrlDate(vars["date"])
+	err, date := ParseURLDate(vars["date"])
 	if err != nil {
 		myError := err.(Response)
 		http.Error(w, myError.String(), myError.Code)
@@ -183,7 +183,7 @@ func (s *Server) saveHandler(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) stateHandler(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
-	err, date := ParseUrlDate(vars["date"])
+	err, date := ParseURLDate(vars["date"])
 	if err != nil {
 		myError := err.(Response)
 		log.Println(myError)
@@ -273,13 +273,13 @@ func (s *Server) overviewHandler(w http.ResponseWriter, r *http.Request) {
 	category := vars["category"]
 	year, err := strconv.ParseInt(vars["year"], 10, 64)
 	if err != nil {
-		http.Error(w, InvalidUrl.String(), InvalidUrl.Code)
+		http.Error(w, InvalidURL.String(), InvalidURL.Code)
 		log.Println("overview:", err)
 		return
 	}
 	month, err := strconv.ParseInt(vars["month"], 10, 64)
 	if err != nil {
-		http.Error(w, InvalidUrl.String(), InvalidUrl.Code)
+		http.Error(w, InvalidURL.String(), InvalidURL.Code)
 		log.Println("overview:", err)
 		return
 	}
@@ -305,7 +305,7 @@ func (s *Server) overviewHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		jsonEncoder.Encode(rows)
 	default:
-		http.Error(w, InvalidUrl.String(), InvalidUrl.Code)
+		http.Error(w, InvalidURL.String(), InvalidURL.Code)
 		return
 	}
 }
@@ -313,7 +313,7 @@ func (s *Server) overviewHandler(w http.ResponseWriter, r *http.Request) {
 // DeleteHandler delete all saved times and kilometers for a given date
 func (s *Server) deleteHandler(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
-	err, date := ParseUrlDate(vars["date"])
+	err, date := ParseURLDate(vars["date"])
 	if err != nil {
 		myError := err.(Response)
 		http.Error(w, myError.String(), myError.Code)

@@ -229,10 +229,10 @@ func TestStateHandler(t *testing.T) {
 //initServer(t)
 //var table []*TestCombo = []*TestCombo{
 //NewTestCombo("/overview", NotFound),
-//NewTestCombo("/overview/invalidCategory/2013/01", InvalidUrl),
-//NewTestCombo("/overview/tijden/201a/01", InvalidUrl),
-//NewTestCombo("/overview/tijden/2013/0a", InvalidUrl),
-//NewTestCombo("/overview/1/2013/01", InvalidUrl),
+//NewTestCombo("/overview/invalidCategory/2013/01", InvalidURL),
+//NewTestCombo("/overview/tijden/201a/01", InvalidURL),
+//NewTestCombo("/overview/tijden/2013/0a", InvalidURL),
+//NewTestCombo("/overview/1/2013/01", InvalidURL),
 //}
 //tableDrivenTest(t, table)
 //}
@@ -380,9 +380,9 @@ func TestOverview(t *testing.T) {
 	initServer(t)
 	var table = []*TestCombo{
 		NewTestCombo("/overview/abc/def", Response{Code: 404}),
-		NewTestCombo("/overview/kilometers/abc/def", InvalidUrl),
-		NewTestCombo("/overview/kilometers/2014/def", InvalidUrl),
-		NewTestCombo("/overview/invalidCategory/2014/1", InvalidUrl),
+		NewTestCombo("/overview/kilometers/abc/def", InvalidURL),
+		NewTestCombo("/overview/kilometers/2014/def", InvalidURL),
+		NewTestCombo("/overview/invalidCategory/2014/1", InvalidURL),
 	}
 	tableDrivenTest(t, table)
 
@@ -456,8 +456,8 @@ func TestDeleteHandler(t *testing.T) {
 	req, _ := http.NewRequest("GET", "/delete/2014", nil)
 	w := httptest.NewRecorder()
 	s.ServeHTTP(w, req)
-	if w.Code != InvalidUrl.Code {
-		t.Errorf("%s : code = %d, want %d", "/delete/2014", w.Code, InvalidUrl.Code)
+	if w.Code != InvalidURL.Code {
+		t.Errorf("%s : code = %d, want %d", "/delete/2014", w.Code, InvalidURL.Code)
 	}
 
 	req, _ = http.NewRequest("GET", "/delete/01012014", nil)

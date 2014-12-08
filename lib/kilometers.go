@@ -11,7 +11,7 @@ import (
 
 // Kilometers is the struct representing a db row in the kilometers table
 type Kilometers struct {
-	Id                            int64
+	ID                            int64 `db:"Id"`
 	Date                          time.Time
 	Begin, Eerste, Laatste, Terug int
 	Comment                       string

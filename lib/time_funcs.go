@@ -2,7 +2,8 @@ package km
 
 import "time"
 
-func ParseUrlDate(dateStr string) (err error, date time.Time) {
+// ParseURLDate parse a datestring used in the url to a time.Time object
+func ParseURLDate(dateStr string) (err error, date time.Time) {
 	date, err = time.Parse("02012006", dateStr)
 	if err != nil {
 		return CustomResponse(InvalidDate, err), time.Time{}
