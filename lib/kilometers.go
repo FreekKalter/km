@@ -5,9 +5,11 @@ import (
 	"time"
 
 	"github.com/coopernurse/gorp"
+	// import postgres for its side effects
 	_ "github.com/lib/pq"
 )
 
+// Kilometers is the struct representing a db row in the kilometers table
 type Kilometers struct {
 	Id                            int64
 	Date                          time.Time
@@ -15,6 +17,7 @@ type Kilometers struct {
 	Comment                       string
 }
 
+// Field holds the data for 1 row in the ui form
 type Field struct {
 	Km   int
 	Time string
@@ -37,6 +40,8 @@ func (k *Kilometers) getMax() int {
 	return 0
 }
 
+// AddFields updates an existing Kilometers truct to update/insert into db
+// with data posted by user
 func (k *Kilometers) AddFields(fields []Field) {
 	for _, field := range fields {
 		switch field.Name {
@@ -53,6 +58,9 @@ func (k *Kilometers) AddFields(fields []Field) {
 	}
 }
 
+// SaveKilometers saves a the given Field array (wich is supplied by the user)
+// if no data is saved for today it results in an insert, otherwise a update of
+// the already saved data is done
 func SaveKilometers(dbmap *gorp.DbMap, date time.Time, fields []Field) (err error) {
 	dateStr := fmt.Sprintf("%d-%d-%d", date.Month(), date.Day(), date.Year())
 	kms := new(Kilometers)
