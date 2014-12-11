@@ -7,14 +7,10 @@ go get -t github.com/FreekKalter/km
 go get -t github.com/FreekKalter/km/lib
 
 go_version=$(go version)
-echo $version
-if [[ $(echo "$version" | grep -qc "devel") -ge 0 ]]; then
-    echo "getting cover tool for devel branch"
+if [[ $(echo "$version" | grep -c "devel") -ge 0 ]]; then
     go get -v golang.org/x/tools/cmd/cover
-elif [[ $(echo "$version" | grep -qc "go1.4") -ge 0 ]]; then
-    echo "getting cover tool for 1.4 branch"
+elif [[ $(echo "$version" | grep -c "go1.4") -ge 0 ]]; then
     go get -v golang.org/x/tools/cmd/cover
 else
-    echo "getting cover tool for <1.4"
     go get -v code.google.com/p/go.tools/cmd/cover
 fi
