@@ -7,9 +7,9 @@ go get -t github.com/FreekKalter/km
 go get -t github.com/FreekKalter/km/lib
 
 go_version=$(go version)
-if [[ $(echo "$version" | grep -c "devel") -gt 0 ]]; then
+if [[ $(echo "$go_version" | grep -c "devel") -gt 0 ]]; then
     go get -v golang.org/x/tools/cmd/cover
-elif [[ $(echo "$version" | grep -c "go1.4") -gt 0 ]]; then
+elif [[ $(echo "$go_version" | grep -c "go1.4") -gt 0 ]]; then
     go get -v golang.org/x/tools/cmd/cover
 else
     go get -v code.google.com/p/go.tools/cmd/cover
